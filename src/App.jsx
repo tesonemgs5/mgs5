@@ -4,6 +4,21 @@ import * as XLSX from 'xlsx';
 const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const DEFAULT_SETTINGS = { batteria: 64, prezzo: 0.50, targa: 'MGS5', p1a: 20, p1b: 30, p2a: 80, p2b: 100 };
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx-MsH05zcKnX72jQQraTMI_EsUroRLVlMrt8qpwAno5BlfT9HmBImXt1LyQHcNUjJ1Vw/exec';
+
+async function syncToSheets(ricariche) {
+  try {
+    await fetch(SHEETS_URL + '?action=write', { method: 'POST', body: JSON.stringify({ data: ricariche }) });
+  } catch(e) { console.error('Sync to Sheets failed:', e); }
+}
+
+async function syncFromSheets() {
+  try {
+    const res = await fetch(SHEETS_URL + '?action=read');
+    const json = await res.json();
+    return json.data || [];
+  } catch(e) { console.error('Sync from Sheets failed:', e); return null; }
+}
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
@@ -270,6 +285,28 @@ export default function App() {
   const [showExport,   setShowExport]   = useState(false);
   const [mesiAperti,   setMesiAperti]   = useState({});
   const { toast, show: showToast }      = useToast();
+  const [syncing,      setSyncing]      = useState(false);
+
+  async function sincronizzaVersoSheet() {
+    setSyncing(true);
+    await syncToSheets(ricariche);
+    setSyncing(false);
+    showToast('☁️ Dati inviati a Google Sheets!');
+  }
+
+  async function sincronizzaDaSheet() {
+    setSyncing(true);
+    const data = await syncFromSheets();
+    setSyncing(false);
+    if (data && data.length > 0) {
+      const nuove = ricalcolaKmParziali(data.sort((a,b) => a.data.localeCompare(b.data)));
+      setRicariche(nuove);
+      showToast('☁️ Dati importati da Google Sheets!');
+      setView('home');
+    } else {
+      showToast('❌ Nessun dato trovato', '#ef4444');
+    }
+  }
 
   function salvaRicarica(record) {
     let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx?record:r) : [...ricariche,record];
@@ -638,6 +675,12 @@ export default function App() {
               </button>
               <button onClick={()=>setShowExport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:14, color:'#a78bfa', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}>
                 <span style={{ fontSize:'1.6rem' }}>📤</span> Esporta
+              </button>
+              <button onClick={sincronizzaDaSheet} disabled={syncing} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.35)', borderRadius:14, color:'#10b981', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer', opacity:syncing?0.6:1 }}>
+                <span style={{ fontSize:'1.6rem' }}>☁️</span> {syncing ? '...' : 'Da Sheet'}
+              </button>
+              <button onClick={sincronizzaVersoSheet} disabled={syncing} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.35)', borderRadius:14, color:'#f59e0b', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer', opacity:syncing?0.6:1 }}>
+                <span style={{ fontSize:'1.6rem' }}>📡</span> {syncing ? '...' : 'A Sheet'}
               </button>
             </div>
           </Card>
