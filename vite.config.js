@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: './',   // necessario per GitHub Pages
+  build: {
+    outDir: 'docs'
+  },
   plugins: [
     react(),
     VitePWA({
