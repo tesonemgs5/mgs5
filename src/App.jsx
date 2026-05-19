@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from 'xlsx';
 
 const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
@@ -277,8 +277,12 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
 
 export default function App() {
   const [view,         setView]         = useState('home');
-  const [ricariche,    setRicariche]    = useState([]);
-  const [settings,     setSettings]     = useState({...DEFAULT_SETTINGS});
+  const [ricariche,    setRicariche]    = useState(() => {
+    try { const s = localStorage.getItem('mgs5_ricariche'); return s ? JSON.parse(s) : []; } catch { return []; }
+  });
+  const [settings,     setSettings]     = useState(() => {
+    try { const s = localStorage.getItem('mgs5_settings'); return s ? {...DEFAULT_SETTINGS,...JSON.parse(s)} : {...DEFAULT_SETTINGS}; } catch { return {...DEFAULT_SETTINGS}; }
+  });
   const [editIdx,      setEditIdx]      = useState(null);
   const [confirmIdx,   setConfirmIdx]   = useState(null);
   const [showImport,   setShowImport]   = useState(false);
@@ -286,6 +290,14 @@ export default function App() {
   const [mesiAperti,   setMesiAperti]   = useState({});
   const { toast, show: showToast }      = useToast();
   const [syncing,      setSyncing]      = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('mgs5_ricariche', JSON.stringify(ricariche)); } catch {}
+  }, [ricariche]);
+
+  useEffect(() => {
+    try { localStorage.setItem('mgs5_settings', JSON.stringify(settings)); } catch {}
+  }, [settings]);
 
   async function sincronizzaVersoSheet() {
     setSyncing(true);
@@ -312,13 +324,15 @@ export default function App() {
     let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx?record:r) : [...ricariche,record];
     nuove = ricalcolaKmParziali(nuove.sort((a,b)=>a.data.localeCompare(b.data)));
     setRicariche(nuove);
-    esportaJSONAuto(nuove, settings);
-    showToast(editIdx!==null?'✅ Aggiornata e salvata!':'✅ Salvata e backup creato!');
+    syncToSheets(nuove);
+    showToast(editIdx!==null?'✅ Aggiornata e salvata!':'✅ Salvata!');
     setEditIdx(null); setView('home');
   }
 
   function cancellaRicarica(idx) {
-    setRicariche(prev=>ricalcolaKmParziali(prev.filter((_,i)=>i!==idx)));
+    const nuove = ricalcolaKmParziali(ricariche.filter((_,i)=>i!==idx));
+    setRicariche(nuove);
+    syncToSheets(nuove);
     setConfirmIdx(null); showToast('🗑 Eliminata');
   }
 
