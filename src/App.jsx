@@ -113,7 +113,7 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
           {/* JSON */}
           <button
-            onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.onchange=onImportJSON; inp.click(); onClose(); }}
+            onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=onImportJSON; inp.click(); onClose(); }}
             style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text, transition:'all 0.2s' }}
           >
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>💾</div>
@@ -123,7 +123,7 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
 
           {/* XLSX / CSV / Sheets */}
           <button
-            onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.onchange=onImportFoglio; inp.click(); onClose(); }}
+            onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv'; inp.onchange=onImportFoglio; inp.click(); onClose(); }}
             style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text, transition:'all 0.2s' }}
           >
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>📊</div>
