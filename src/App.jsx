@@ -4,11 +4,12 @@ import * as XLSX from 'xlsx';
 const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const DEFAULT_SETTINGS = { batteria: 64, prezzo: 0.50, targa: 'MGS5', p1a: 20, p1b: 30, p2a: 80, p2b: 100 };
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyKHR17Kv9jDXxj5fCbjz4dSi3BK9UEZgEQMFhQK-VeHO-Z9tKD_HY9fOGtOC0R_V75gQ/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx-bxXjJA6WY1iuconUWxIm5OfQCjcEQ_gMX6vLc5HtS2agtk1-QhDp4zL_CmwOI955sA/exec';
 
 async function syncToSheets(ricariche) {
   try {
-    await fetch(SHEETS_URL + '?action=write', { method: 'POST', body: JSON.stringify({ data: ricariche }) });
+    const encoded = encodeURIComponent(JSON.stringify(ricariche));
+    await fetch(SHEETS_URL + '?action=write&data=' + encoded);
   } catch(e) { console.error('Sync to Sheets failed:', e); }
 }
 
@@ -311,28 +312,7 @@ export default function App() {
     const data = await syncFromSheets();
     setSyncing(false);
     if (data && data.length > 0) {
-      const normalizzate = data.map(r => {
-        const pctPrima = parseFloat(r.percPrima) || 0;
-        const pctDopo  = parseFloat(r.percDopo)  || 0;
-        const kwhEff   = parseFloat(r.kwhEff)    || 0;
-        const prezzoKwh= parseFloat(r.prezzoKwh) || 0;
-        const costo    = parseFloat(r.costo)      || (kwhEff * prezzoKwh);
-        const kwh100   = parseFloat(r.kwh100)     || null;
-        return {
-          data:      r.data,
-          km:        parseFloat(r.km) || null,
-          kmParziali:parseFloat(r.kmParziali) || null,
-          pctPrima,
-          pctDopo,
-          kwhEff,
-          prezzoKwh,
-          costo,
-          kwh100,
-          luogo:     r.dove || r.luogo || null,
-          progCasa:  parseFloat(r.progCasa) || null,
-        };
-      });
-      const nuove = ricalcolaKmParziali(normalizzate.sort((a,b) => a.data.localeCompare(b.data)));
+      const nuove = ricalcolaKmParziali(data.sort((a,b) => a.data.localeCompare(b.data)));
       setRicariche(nuove);
       showToast('☁️ Dati importati da Google Sheets!');
       setView('home');
