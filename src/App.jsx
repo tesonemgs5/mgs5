@@ -342,7 +342,7 @@ export default function App() {
 
   function esportaCSV() {
     const header='Data,KM Totali,KM Parziali,% Prima,% Dopo,kWh Effettivi,Prezzo Euro/kWh,Costo Euro,kWh/100km,Luogo\n';
-    const rows=ricariche.map(r=>[r.data,r.km||'',r.kmParziali||'',r.pctPrima,r.pctDopo,r.kwhEff.toFixed(3),r.prezzoKwh,r.costo.toFixed(3),r.kwh100?r.kwh100.toFixed(2):'',r.luogo||''].join(',')).join('\n');
+    const rows=ricariche.map(r=>[r.data,r.km||'',r.kmParziali||'',r.pctPrima,r.pctDopo,(r.kwhEff||0).toFixed(3),r.prezzoKwh,(r.costo||0).toFixed(3),r.kwh100?(r.kwh100||0).toFixed(2):'',r.luogo||''].join(',')).join('\n');
     scarica('ricariche.csv','text/csv',header+rows);
     showToast('📊 CSV esportato');
   }
@@ -579,7 +579,7 @@ export default function App() {
             <div style={{ fontSize:'0.62rem', color:S.text2, textTransform:'uppercase', letterSpacing:'0.06em' }}>km totali</div>
           </div>
           <div style={{ textAlign:'right' }}>
-            <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent }}>{costoTot?'€'+costoTot.toFixed(2):'—'}</div>
+            <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent }}>{costoTot?'€'+(costoTot||0).toFixed(2):'—'}</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, textTransform:'uppercase', letterSpacing:'0.06em' }}>costo tot.</div>
           </div>
         </div>
@@ -622,8 +622,8 @@ export default function App() {
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.green }}>€{totCosto.toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.75rem', color:S.accent }}>{totKwh.toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.green }}>€{(totCosto||0).toFixed(2)}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.75rem', color:S.accent }}>{(totKwh||0).toFixed(1)} kWh</div>
                     </div>
                     <div style={{ color:S.text2, fontSize:'0.8rem', transition:'transform 0.2s', transform: aperto?'rotate(180deg)':'rotate(0deg)' }}>▼</div>
                   </div>
@@ -644,7 +644,7 @@ export default function App() {
                             </div>
                           </div>
                           <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between' }}>
-                            <div style={{ fontSize:'1.3rem', fontWeight:700, fontFamily:'monospace', color:S.text }}>{r.kwhEff.toFixed(2)} kWh</div>
+                            <div style={{ fontSize:'1.3rem', fontWeight:700, fontFamily:'monospace', color:S.text }}>{(r.kwhEff||0).toFixed(2)} kWh</div>
                             <div style={{ fontFamily:'monospace', fontSize:'0.9rem', color:S.accent2 }}>{r.kwh100?r.kwh100.toFixed(2)+' kWh/100km':'—'}</div>
                           </div>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -654,8 +654,8 @@ export default function App() {
                               {r.km?'  ·  '+r.km.toLocaleString('it')+' km tot.':''}
                             </div>
                             <div style={{ textAlign:'right' }}>
-                              <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.green }}>€{r.costo.toFixed(2)}</div>
-                              <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.accent }}>↑€{progMap[r.idx].toFixed(2)}</div>
+                              <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.green }}>€{(r.costo||0).toFixed(2)}</div>
+                              <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.accent }}>↑€{(progMap[r.idx]||0).toFixed(2)}</div>
                             </div>
                           </div>
                         </div>
@@ -709,9 +709,9 @@ export default function App() {
               <div key={mese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
                 <div>
                   <div style={{ fontSize:'0.85rem' }}>{mese}</div>
-                  <div style={{ fontSize:'0.65rem', color:S.text2 }}>{v.count} ricariche · {v.kwh.toFixed(1)} kWh</div>
+                  <div style={{ fontSize:'0.65rem', color:S.text2 }}>{v.count} ricariche · {(v.kwh||0).toFixed(1)} kWh</div>
                 </div>
-                <div style={{ fontFamily:'monospace', color:S.green }}>€{v.costo.toFixed(2)}</div>
+                <div style={{ fontFamily:'monospace', color:S.green }}>€{(v.costo||0).toFixed(2)}</div>
               </div>
             ))}
             {!ricariche.length&&<div style={{ textAlign:'center', padding:20, color:S.text2, fontSize:'0.85rem' }}>Nessun dato</div>}
