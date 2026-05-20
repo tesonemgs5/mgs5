@@ -311,7 +311,28 @@ export default function App() {
     const data = await syncFromSheets();
     setSyncing(false);
     if (data && data.length > 0) {
-      const nuove = ricalcolaKmParziali(data.sort((a,b) => a.data.localeCompare(b.data)));
+      const normalizzate = data.map(r => {
+        const pctPrima = parseFloat(r.percPrima) || 0;
+        const pctDopo  = parseFloat(r.percDopo)  || 0;
+        const kwhEff   = parseFloat(r.kwhEff)    || 0;
+        const prezzoKwh= parseFloat(r.prezzoKwh) || 0;
+        const costo    = parseFloat(r.costo)      || (kwhEff * prezzoKwh);
+        const kwh100   = parseFloat(r.kwh100)     || null;
+        return {
+          data:      r.data,
+          km:        parseFloat(r.km) || null,
+          kmParziali:parseFloat(r.kmParziali) || null,
+          pctPrima,
+          pctDopo,
+          kwhEff,
+          prezzoKwh,
+          costo,
+          kwh100,
+          luogo:     r.dove || r.luogo || null,
+          progCasa:  parseFloat(r.progCasa) || null,
+        };
+      });
+      const nuove = ricalcolaKmParziali(normalizzate.sort((a,b) => a.data.localeCompare(b.data)));
       setRicariche(nuove);
       showToast('☁️ Dati importati da Google Sheets!');
       setView('home');
