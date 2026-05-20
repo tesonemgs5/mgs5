@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const DEFAULT_SETTINGS = { batteria: 64, prezzo: 0.50, targa: 'MGS5', p1a: 20, p1b: 30, p2a: 80, p2b: 100 };
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx-MsH05zcKnX72jQQraTMI_EsUroRLVlMrt8qpwAno5BlfT9HmBImXt1LyQHcNUjJ1Vw/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyKHR17Kv9jDXxj5fCbjz4dSi3BK9UEZgEQMFhQK-VeHO-Z9tKD_HY9fOGtOC0R_V75gQ/exec';
 
 async function syncToSheets(ricariche) {
   try {
