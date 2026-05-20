@@ -23,6 +23,21 @@ async function syncFromSheets() {
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
+function sanitizzaRicarica(r) {
+  return {
+    ...r,
+    kwhEff:    parseFloat(r.kwhEff)    || 0,
+    kwhTeor:   parseFloat(r.kwhTeor)   || 0,
+    costo:     parseFloat(r.costo)     || 0,
+    prezzoKwh: parseFloat(r.prezzoKwh) || 0,
+    pctPrima:  parseFloat(r.pctPrima)  || 0,
+    pctDopo:   parseFloat(r.pctDopo)   || 0,
+    kwh100:    r.kwh100 != null ? parseFloat(r.kwh100) || null : null,
+    km:        r.km != null ? parseFloat(r.km) || null : null,
+    kmParziali:r.kmParziali != null ? parseFloat(r.kmParziali) || null : null,
+  };
+}
+
 function useToast() {
   const [toast, setToast] = useState(null);
   const show = (msg, color = '#10b981') => {
@@ -279,7 +294,7 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
 export default function App() {
   const [view,         setView]         = useState('home');
   const [ricariche,    setRicariche]    = useState(() => {
-    try { const s = localStorage.getItem('mgs5_ricariche'); return s ? JSON.parse(s) : []; } catch { return []; }
+    try { const s = localStorage.getItem('mgs5_ricariche'); return s ? JSON.parse(s).map(sanitizzaRicarica) : []; } catch { return []; }
   });
   const [settings,     setSettings]     = useState(() => {
     try { const s = localStorage.getItem('mgs5_settings'); return s ? {...DEFAULT_SETTINGS,...JSON.parse(s)} : {...DEFAULT_SETTINGS}; } catch { return {...DEFAULT_SETTINGS}; }
@@ -312,7 +327,7 @@ export default function App() {
     const data = await syncFromSheets();
     setSyncing(false);
     if (data && data.length > 0) {
-      const nuove = ricalcolaKmParziali(data.sort((a,b) => a.data.localeCompare(b.data)));
+      const nuove = ricalcolaKmParziali(data.sort((a,b) => a.data.localeCompare(b.data)).map(sanitizzaRicarica));
       setRicariche(nuove);
       showToast('☁️ Dati importati da Google Sheets!');
       setView('home');
@@ -359,7 +374,7 @@ export default function App() {
       try {
         const data=JSON.parse(ev.target.result);
         if (data.ricariche) {
-          setRicariche(ricalcolaKmParziali(data.ricariche.sort((a,b)=>a.data.localeCompare(b.data))));
+          setRicariche(ricalcolaKmParziali(data.ricariche.sort((a,b)=>a.data.localeCompare(b.data)).map(sanitizzaRicarica)));
           if (data.settings) setSettings({...DEFAULT_SETTINGS,...data.settings});
           showToast('✅ Dati importati!'); setView('home');
         }
@@ -455,7 +470,7 @@ export default function App() {
         }
 
         if (!nuove.length) { showToast('❌ Nessun dato riconosciuto', '#ef4444'); return; }
-        const ordinate = ricalcolaKmParziali(nuove.sort((a,b) => a.data.localeCompare(b.data)));
+        const ordinate = ricalcolaKmParziali(nuove.sort((a,b) => a.data.localeCompare(b.data)).map(sanitizzaRicarica));
         setRicariche(ordinate);
         showToast(`✅ Importate ${ordinate.length} ricariche!`);
         setView('home');
