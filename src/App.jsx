@@ -25,12 +25,14 @@ function today() { return new Date().toISOString().split('T')[0]; }
 
 function toNum(x, def = 0) { const n = Number(x); return Number.isFinite(n) ? n : def; }
 function sanitizzaRicarica(r) {
-  // compatibilità campi Excel (percPrima/percDopo) e campi app (pctPrima/pctDopo)
-  const pctPrima = toNum(r?.pctPrima ?? r?.percPrima, 0);
-  const pctDopo  = toNum(r?.pctDopo  ?? r?.percDopo,  0);
-  const costo    = toNum(r?.costo, 0) || toNum(r?.costoEuro, 0) || toNum(r?.euro, 0);
-  const prezzoKwh = toNum(r?.prezzoKwh, 0) || toNum(r?.prezzoKWh, 0) || toNum(r?.prezzo, 0);
-  return { ...r, kwhEff: toNum(r?.kwhEff, 0), kwhTeor: toNum(r?.kwhTeor, 0),
+  const pctPrima  = toNum(r?.pctPrima  ?? r?.percPrima,  0);
+  const pctDopo   = toNum(r?.pctDopo   ?? r?.percDopo,   0);
+  const kwhEff    = toNum(r?.kwhEff,   0);
+  const prezzoKwh = toNum(r?.prezzoKwh ?? r?.prezzoKWh ?? r?.prezzo, 0);
+  // ricalcola costo se mancante o zero
+  const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
+  const costo     = costoRaw > 0 ? costoRaw : (kwhEff * prezzoKwh);
+  return { ...r, kwhEff, kwhTeor: toNum(r?.kwhTeor, 0),
     costo, prezzoKwh, pctPrima, pctDopo,
     kwh100: r?.kwh100 == null ? null : (Number.isFinite(Number(r.kwh100)) ? Number(r.kwh100) : null),
     km: r?.km == null ? null : (Number.isFinite(Number(r.km)) ? Number(r.km) : null),
