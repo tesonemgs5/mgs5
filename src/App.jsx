@@ -646,17 +646,22 @@ export default function App() {
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent, flexShrink:0 }}/>
                     <div>
-                      <div style={{ fontWeight:900, fontSize:'1.1rem', textTransform:'uppercase', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.1 }}>{MESI_NOMI[parseInt(mese)-1]}</div>
-                      <div style={{ fontWeight:900, fontSize:'1.1rem', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.1 }}>{anno}</div>
-                      <div style={{ fontSize:'0.68rem', color:S.text2, marginTop:2 }}>{lista.length} ric · {listaCasa.length} casa</div>
+                      <div style={{ fontWeight:900, fontSize:'1.1rem', textTransform:'uppercase', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.15 }}>{MESI_NOMI[parseInt(mese)-1]}</div>
+                      <div style={{ fontWeight:900, fontSize:'1.1rem', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.15 }}>{anno}</div>
                     </div>
                   </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ textAlign:'right', minWidth:32 }}>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.78rem', color:S.text2, lineHeight:1.6 }}>{lista.length} ric</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.78rem', color:S.text2, lineHeight:1.6 }}>tot</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.78rem', color:S.text2, lineHeight:1.6 }}>{listaCasa.length} ric</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.78rem', color:S.text2, lineHeight:1.6 }}>casa</div>
+                    </div>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:S.accent }}>€{(totCosto||0).toFixed(2)} · {(totKwh||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:S.accent }}>{lista.length} ric</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:'#34d399' }}>€{(totCostoCasa||0).toFixed(2)} · {(totKwhCasa||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:'#34d399' }}>{listaCasa.length} casa</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.95rem', fontWeight:700, color:S.accent, lineHeight:1.6 }}>€{(totCosto||0).toFixed(2)}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.95rem', fontWeight:700, color:S.accent, lineHeight:1.6 }}>{(totKwh||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.95rem', fontWeight:700, color:'#34d399', lineHeight:1.6 }}>€{(totCostoCasa||0).toFixed(2)}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.95rem', fontWeight:700, color:'#34d399', lineHeight:1.6 }}>{(totKwhCasa||0).toFixed(1)} kWh</div>
                     </div>
                     <div style={{ color:S.text2, fontSize:'0.8rem', transition:'transform 0.2s', transform: aperto?'rotate(180deg)':'rotate(0deg)' }}>▼</div>
                   </div>
