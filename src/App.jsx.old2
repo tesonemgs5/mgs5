@@ -639,28 +639,16 @@ export default function App() {
             return (
               <div key={key} style={{ marginBottom:10 }}>
                 <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,58,237,0.1))', border:`1px solid ${S.border}`, borderRadius: aperto ? '14px 14px 0 0' : 14, cursor:'pointer', userSelect:'none' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent, flexShrink:0 }}/>
-                    <div>
-                      <div style={{ fontWeight:900, fontSize:'1.1rem', textTransform:'uppercase', letterSpacing:'0.08em', color:'#ffffff' }}>{MESI_NOMI[parseInt(mese)-1]} {anno}</div>
-                      <div style={{ fontSize:'0.68rem', color:S.text2 }}>{lista.length} ric. / {listaCasa.length} casa</div>
-                    </div>
-                  </div>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent }}/>
+                    <div style={{ fontWeight:900, fontSize:'1.15rem', textTransform:'uppercase', letterSpacing:'0.08em' }}>{MESI_NOMI[parseInt(mese)-1]} {anno}</div>
+                    <div style={{ fontSize:'0.7rem', color:S.text2 }}>{lista.length} tot / {listaCasa.length} casa</div>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.82rem', fontWeight:600 }}>
-                        <span style={{ color:S.text2 }}>tot </span>
-                        <span style={{ color:S.accent }}>€{(totCosto||0).toFixed(2)}</span>
-                        <span style={{ color:S.text2 }}> · </span>
-                        <span style={{ color:S.accent }}>{(totKwh||0).toFixed(1)} kWh</span>
-                      </div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.82rem', fontWeight:600 }}>
-                        <span style={{ color:S.text2 }}>casa </span>
-                        <span style={{ color:'#34d399' }}>€{(totCostoCasa||0).toFixed(2)}</span>
-                        <span style={{ color:S.text2 }}> · </span>
-                        <span style={{ color:'#34d399' }}>{(totKwhCasa||0).toFixed(1)} kWh</span>
-                      </div>
-
+                      <div style={{ fontFamily:'monospace', fontSize:'0.85rem', fontWeight:700, color:S.accent }}>€{(totCosto||0).toFixed(2)} · {(totKwh||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.85rem', fontWeight:700, color:'#34d399' }}>🏠 €{(totCostoCasa||0).toFixed(2)} · {(totKwhCasa||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.text2 }}>prog.mese €{(progMese||0).toFixed(2)} · casa €{(progCasa||0).toFixed(2)}</div>
                     </div>
                     <div style={{ color:S.text2, fontSize:'0.8rem', transition:'transform 0.2s', transform: aperto?'rotate(180deg)':'rotate(0deg)' }}>▼</div>
                   </div>
@@ -675,14 +663,14 @@ export default function App() {
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                             <div style={{ fontFamily:'monospace', fontSize:'0.85rem', color:S.text2, fontWeight:600 }}>{dataStr}{r.luogo?' · '+r.luogo:''}</div>
                             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                              <div style={{ fontFamily:'monospace', fontSize:'0.8rem', color:S.text2 }}>{Math.round(r.pctPrima*(r.pctPrima<=1?100:1))}→{Math.round(r.pctDopo*(r.pctDopo<=1?100:1))}%</div>
+                              <div style={{ fontFamily:'monospace', fontSize:'0.8rem', color:S.text2 }}>{r.pctPrima}→{r.pctDopo}%</div>
                               <button onClick={e=>{e.stopPropagation();apriModifica(r.idx);}} style={{ background:'none', border:'none', color:S.accent, cursor:'pointer', padding:'4px 6px', fontSize:'1rem' }}>✏️</button>
                               <button onClick={e=>{e.stopPropagation();setConfirmIdx(r.idx);}} style={{ background:'none', border:'none', color:'#ef4444', cursor:'pointer', padding:'4px 8px', fontSize:'1.1rem', fontWeight:700 }}>✕</button>
                             </div>
                           </div>
                           <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between' }}>
                             <div style={{ fontSize:'1.3rem', fontWeight:700, fontFamily:'monospace', color:S.text }}>{(r.kwhEff||0).toFixed(2)} kWh</div>
-                            <div style={{ fontFamily:'monospace', fontSize:'0.9rem', color:'#f59e0b' }}>{r.kwh100?r.kwh100.toFixed(2)+' kWh/100km':'—'}</div>
+                            <div style={{ fontFamily:'monospace', fontSize:'0.9rem', color:S.accent2 }}>{r.kwh100?r.kwh100.toFixed(2)+' kWh/100km':'—'}</div>
                           </div>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                             <div style={{ fontSize:'0.8rem', color:S.text2, lineHeight:1.6 }}>
