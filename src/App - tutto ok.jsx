@@ -24,15 +24,6 @@ async function syncFromSheets() {
 function today() { return new Date().toISOString().split('T')[0]; }
 
 function toNum(x, def = 0) { const n = Number(x); return Number.isFinite(n) ? n : def; }
-function normalizzaData(d) {
-  if (!d) return '';
-  // già in formato YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}/.test(String(d))) return String(d).slice(0,10);
-  // formato lungo tipo "Fri Apr 10 2026 09:00:00 GMT+0200"
-  const dt = new Date(d);
-  if (!isNaN(dt)) return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-  return String(d).slice(0,10);
-}
 function sanitizzaRicarica(r) {
   const pctPrima  = toNum(r?.pctPrima  ?? r?.percPrima,  0);
   const pctDopo   = toNum(r?.pctDopo   ?? r?.percDopo,   0);
@@ -41,7 +32,7 @@ function sanitizzaRicarica(r) {
   // ricalcola costo se mancante o zero
   const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
   const costo     = costoRaw > 0 ? costoRaw : (kwhEff * prezzoKwh);
-  return { ...r, data: normalizzaData(r?.data), kwhEff, kwhTeor: toNum(r?.kwhTeor, 0),
+  return { ...r, kwhEff, kwhTeor: toNum(r?.kwhTeor, 0),
     costo, prezzoKwh, pctPrima, pctDopo,
     kwh100: r?.kwh100 == null ? null : (Number.isFinite(Number(r.kwh100)) ? Number(r.kwh100) : null),
     km: r?.km == null ? null : (Number.isFinite(Number(r.km)) ? Number(r.km) : null),
@@ -528,7 +519,7 @@ export default function App() {
     if(!perMese[key]) perMese[key]=[];
     perMese[key].push({...r,idx:i});
   });
-  Object.keys(perMese).forEach(k=>perMese[k].sort((a,b)=>new Date(b.data)-new Date(a.data)));
+  Object.keys(perMese).forEach(k=>perMese[k].sort((a,b)=>b.data.localeCompare(a.data)));
 
   const perMeseChart={};
   ricariche.forEach(r=>{
