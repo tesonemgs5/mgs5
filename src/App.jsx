@@ -650,13 +650,15 @@ export default function App() {
                       <div style={{ fontWeight:900, fontSize:'1.2rem', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.15 }}>{anno}</div>
                     </div>
                   </div>
-                  <div style={{ display:'flex', alignItems:'center', flex:1, justifyContent:'center', gap:8 }}>
+                  <div style={{ display:'flex', alignItems:'center', flex:1, justifyContent:'center' }}>
                     <div style={{ textAlign:'right' }}>
                       <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>{lista.length} ric</div>
                       <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>tot</div>
                       <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>{listaCasa.length} ric</div>
                       <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>casa</div>
                     </div>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <div style={{ textAlign:'right' }}>
                       <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent, lineHeight:1.6 }}>€{(totCosto||0).toFixed(2)}</div>
                       <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent, lineHeight:1.6 }}>{(totKwh||0).toFixed(1)} kWh</div>
