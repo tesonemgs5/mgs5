@@ -650,7 +650,7 @@ export default function App() {
                       <div style={{ fontWeight:900, fontSize:'1.2rem', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.15 }}>{anno}</div>
                     </div>
                   </div>
-                  <div style={{ display:'flex', alignItems:'center', flex:1, justifyContent:'flex-end', gap:8 }}>
+                  <div style={{ display:'flex', alignItems:'center', flex:1, justifyContent:'center', gap:8 }}>
                     <div style={{ textAlign:'right' }}>
                       <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>{lista.length} ric</div>
                       <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>tot</div>
