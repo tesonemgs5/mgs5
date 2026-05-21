@@ -574,6 +574,7 @@ export default function App() {
                 <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6 }}>Ripristino<br/>completo</div>
               </button>
             </div>
+            <a href="https://docs.google.com/spreadsheets/d/1msCKdhLM2HZ8Nb0T6qP5rOIz_Chj71HTMIIio4zENiA/edit?gid=1262952548#gid=1262952548" target="_blank" rel="noreferrer" style={{ display:'block', width:'100%', padding:'13px 0', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:12, color:S.accent, fontSize:'0.85rem', fontWeight:700, textAlign:'center', textDecoration:'none', marginBottom:8, boxSizing:'border-box' }}>📊 Apri Google Sheet</a>
             <button onClick={()=>setShowExport(false)} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor:'pointer' }}>Annulla</button>
           </div>
         </div>
@@ -645,16 +646,17 @@ export default function App() {
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent, flexShrink:0 }}/>
                     <div>
-                      <div style={{ fontWeight:900, fontSize:'1.1rem', textTransform:'uppercase', letterSpacing:'0.08em', color:'#ffffff' }}>{MESI_NOMI[parseInt(mese)-1]} {anno}</div>
-                      <div style={{ fontSize:'0.68rem', color:S.text2 }}>{lista.length} ric. / {listaCasa.length} casa</div>
+                      <div style={{ fontWeight:900, fontSize:'1.1rem', textTransform:'uppercase', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.1 }}>{MESI_NOMI[parseInt(mese)-1]}</div>
+                      <div style={{ fontWeight:900, fontSize:'1.1rem', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.1 }}>{anno}</div>
+                      <div style={{ fontSize:'0.68rem', color:S.text2, marginTop:2 }}>{lista.length} ric · {listaCasa.length} casa</div>
                     </div>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.accent }}>{lista.length} ric. · €{(totCosto||0).toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.accent }}>{(totKwh||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:'#34d399' }}>{listaCasa.length} casa · €{(totCostoCasa||0).toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:'#34d399' }}>{(totKwhCasa||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:S.accent }}>€{(totCosto||0).toFixed(2)} · {(totKwh||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:S.accent }}>{lista.length} ric</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:'#34d399' }}>€{(totCostoCasa||0).toFixed(2)} · {(totKwhCasa||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.9rem', fontWeight:700, color:'#34d399' }}>{listaCasa.length} casa</div>
                     </div>
                     <div style={{ color:S.text2, fontSize:'0.8rem', transition:'transform 0.2s', transform: aperto?'rotate(180deg)':'rotate(0deg)' }}>▼</div>
                   </div>
