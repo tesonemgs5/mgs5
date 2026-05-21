@@ -23,20 +23,7 @@ async function syncFromSheets() {
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
-function toNum(x, def = 0) { const n = Number(x); return Number.isFinite(n) ? n : def; }
-function sanitizzaRicarica(r) {
-  // compatibilità campi Excel (percPrima/percDopo) e campi app (pctPrima/pctDopo)
-  const pctPrima = toNum(r?.pctPrima ?? r?.percPrima, 0);
-  const pctDopo  = toNum(r?.pctDopo  ?? r?.percDopo,  0);
-  const costo    = toNum(r?.costo, 0) || toNum(r?.costoEuro, 0) || toNum(r?.euro, 0);
-  const prezzoKwh = toNum(r?.prezzoKwh, 0) || toNum(r?.prezzoKWh, 0) || toNum(r?.prezzo, 0);
-  return { ...r, kwhEff: toNum(r?.kwhEff, 0), kwhTeor: toNum(r?.kwhTeor, 0),
-    costo, prezzoKwh, pctPrima, pctDopo,
-    kwh100: r?.kwh100 == null ? null : (Number.isFinite(Number(r.kwh100)) ? Number(r.kwh100) : null),
-    km: r?.km == null ? null : (Number.isFinite(Number(r.km)) ? Number(r.km) : null),
-    kmParziali: r?.kmParziali == null ? null : (Number.isFinite(Number(r.kmParziali)) ? Number(r.kmParziali) : null),
-  };
-}
+function toNum(x, def = 0) { const n = Number(x); return Number.isFinite(n) ? n : def; } function sanitizzaRicarica(r) { return { ...r, kwhEff: toNum(r?.kwhEff, 0), kwhTeor: toNum(r?.kwhTeor, 0), costo: toNum(r?.costo, 0), prezzoKwh: toNum(r?.prezzoKwh, 0), pctPrima: toNum(r?.pctPrima, 0), pctDopo: toNum(r?.pctDopo, 0), kwh100: r?.kwh100 == null ? null : (Number.isFinite(Number(r.kwh100)) ? Number(r.kwh100) : null), km: r?.km == null ? null : (Number.isFinite(Number(r.km)) ? Number(r.km) : null), kmParziali:r?.kmParziali == null ? null : (Number.isFinite(Number(r.kmParziali)) ? Number(r.kmParziali) : null), }; }
 function useToast() {
   const [toast, setToast] = useState(null);
   const show = (msg, color = '#10b981') => {
@@ -633,22 +620,20 @@ export default function App() {
             // primo mese aperto di default, gli altri chiusi
             const aperto = key in mesiAperti ? mesiAperti[key] : keyIdx===0;
             const toggleMese = () => setMesiAperti(prev=>({...prev,[key]:!aperto}));
-            const listaCasa = lista.filter(r=>(r.luogo||'').toUpperCase()==='CASA');
-            const totCostoCasa = listaCasa.reduce((s,r)=>s+r.costo,0);
-            const totKwhCasa = listaCasa.reduce((s,r)=>s+r.kwhEff,0);
             return (
               <div key={key} style={{ marginBottom:10 }}>
                 <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,58,237,0.1))', border:`1px solid ${S.border}`, borderRadius: aperto ? '14px 14px 0 0' : 14, cursor:'pointer', userSelect:'none' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent }}/>
                     <div style={{ fontWeight:900, fontSize:'1.15rem', textTransform:'uppercase', letterSpacing:'0.08em' }}>{MESI_NOMI[parseInt(mese)-1]} {anno}</div>
-                    <div style={{ fontSize:'0.7rem', color:S.text2 }}>{lista.length} tot / {listaCasa.length} casa</div>
+                    <div style={{ fontSize:'0.7rem', color:S.text2 }}>{lista.length} ric.</div>
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.85rem', fontWeight:700, color:S.accent }}>€{(totCosto||0).toFixed(2)} · {(totKwh||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.85rem', fontWeight:700, color:'#34d399' }}>🏠 €{(totCostoCasa||0).toFixed(2)} · {(totKwhCasa||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.text2 }}>prog.mese €{(progMese||0).toFixed(2)} · casa €{(progCasa||0).toFixed(2)}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.green }}>€{(totCosto||0).toFixed(2)}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.75rem', color:S.accent }}>{(totKwh||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.68rem', color:'#f59e0b' }}>📅 €{(progMese||0).toFixed(2)}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.68rem', color:'#34d399' }}>🏠 €{(progCasa||0).toFixed(2)}</div>
                     </div>
                     <div style={{ color:S.text2, fontSize:'0.8rem', transition:'transform 0.2s', transform: aperto?'rotate(180deg)':'rotate(0deg)' }}>▼</div>
                   </div>

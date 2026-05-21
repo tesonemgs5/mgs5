@@ -1,0 +1,6 @@
+Scarica il file App.jsx e copialo in src/
+Apri il CMD
+Digita cd Desktop\mgs5-app
+npm run build
+GitHub Desktop → scrivi il messaggio di commit → Commit to main → Push origin
+tesonemgs5.github.io/mgs5-app
