@@ -581,10 +581,7 @@ export default function App() {
 
       {/* HEADER */}
       <div style={{ position:'sticky', top:0, zIndex:100, background:'rgba(10,15,30,0.95)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${S.border}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ fontSize:'1.1rem', fontWeight:800, letterSpacing:'0.05em' }}>MG<span style={{color:S.accent}}>S5</span></div>
-          <a href="https://docs.google.com/spreadsheets/d/1msCKdhLM2HZ8Nb0T6qP5rOIz_Chj71HTMIIio4zENiA/edit?gid=1262952548#gid=1262952548" target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.25)', borderRadius:20, color:S.accent, fontSize:'0.65rem', fontWeight:700, textDecoration:'none' }}>📊</a>
-        </div>
+        <div style={{ fontSize:'1.1rem', fontWeight:800, letterSpacing:'0.05em' }}>MG<span style={{color:S.accent}}>S5</span></div>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ textAlign:'right' }}>
             <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent }}>{kmMax?kmMax.toLocaleString('it'):'—'}</div>
@@ -651,10 +648,19 @@ export default function App() {
                   </div>
                   <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                     <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.accent }}>{lista.length} ric. · €{(totCosto||0).toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.accent }}>{(totKwh||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:'#34d399' }}>{listaCasa.length} casa · €{(totCostoCasa||0).toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:'#34d399' }}>{(totKwhCasa||0).toFixed(1)} kWh</div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.82rem', fontWeight:600 }}>
+                        <span style={{ color:S.text2 }}>tot </span>
+                        <span style={{ color:S.accent }}>€{(totCosto||0).toFixed(2)}</span>
+                        <span style={{ color:S.text2 }}> · </span>
+                        <span style={{ color:S.accent }}>{(totKwh||0).toFixed(1)} kWh</span>
+                      </div>
+                      <div style={{ fontFamily:'monospace', fontSize:'0.82rem', fontWeight:600 }}>
+                        <span style={{ color:S.text2 }}>casa </span>
+                        <span style={{ color:'#34d399' }}>€{(totCostoCasa||0).toFixed(2)}</span>
+                        <span style={{ color:S.text2 }}> · </span>
+                        <span style={{ color:'#34d399' }}>{(totKwhCasa||0).toFixed(1)} kWh</span>
+                      </div>
+
                     </div>
                     <div style={{ color:S.text2, fontSize:'0.8rem', transition:'transform 0.2s', transform: aperto?'rotate(180deg)':'rotate(0deg)' }}>▼</div>
                   </div>
@@ -663,7 +669,7 @@ export default function App() {
                   <div style={{ border:`1px solid ${S.border}`, borderTop:'none', borderRadius:'0 0 14px 14px', overflow:'hidden' }}>
                     {lista.map(r=>{
                       const d=new Date(r.data);
-                      const dataStr=String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+                      const dataStr=String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1);
                       return (
                         <div key={r.idx} style={{ padding:'14px 16px', background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', gap:8 }}>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
