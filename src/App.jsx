@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const DEFAULT_SETTINGS = { batteria: 64, prezzo: 0.50, targa: 'MGS5', p1a: 20, p1b: 30, p2a: 80, p2b: 100 };
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx-bxXjJA6WY1iuconUWxIm5OfQCjcEQ_gMX6vLc5HtS2agtk1-QhDp4zL_CmwOI955sA/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyb70PcCzlVoACCdodeyJ2vmhg9v1_NaEAIlkj_jpBvE4RuFK0kO5d24zsKkAC2Ccwc/exec';
 
 async function syncToSheets(ricariche) {
   try {
@@ -40,8 +40,14 @@ function sanitizzaRicarica(r) {
   const prezzoKwh = toNum(r?.prezzoKwh ?? r?.prezzoKWh ?? r?.prezzo, 0);
   // ricalcola costo se mancante o zero
   const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
-  const costo     = costoRaw > 0 ? costoRaw : (kwhEff * prezzoKwh);
-  return { ...r, data: normalizzaData(r?.data), kwhEff, kwhTeor: toNum(r?.kwhTeor, 0),
+  const costo     = (prezzoKwh > 0 && kwhEff > 0) ? kwhEff * prezzoKwh : (costoRaw > 0 ? costoRaw : 0);
+  const luogo = (() => {
+    const l = (r?.luogo || r?.dove || r?.location || '').toString().trim().toUpperCase();
+    if (l) return l;
+    if (Math.abs(prezzoKwh - 0.20) < 0.001) return 'CASA';
+    return '';
+  })();
+  return { ...r, luogo, data: normalizzaData(r?.data), kwhEff, kwhTeor: toNum(r?.kwhTeor, 0),
     costo, prezzoKwh, pctPrima, pctDopo,
     kwh100: r?.kwh100 == null ? null : (Number.isFinite(Number(r.kwh100)) ? Number(r.kwh100) : null),
     km: r?.km == null ? null : (Number.isFinite(Number(r.km)) ? Number(r.km) : null),
@@ -337,7 +343,7 @@ export default function App() {
     const data = await syncFromSheets();
     setSyncing(false);
     if (data && data.length > 0) {
-      const nuove = ricalcolaKmParziali(data.sort((a,b) => a.data.localeCompare(b.data)).map(sanitizzaRicarica));
+      const nuove = ricalcolaKmParziali(data.sort((a,b) => (a.km||0) - (b.km||0)).map(sanitizzaRicarica));
       setRicariche(nuove);
       showToast('☁️ Dati importati da Google Sheets!');
       setView('home');
@@ -347,7 +353,7 @@ export default function App() {
   }
 
  function salvaRicarica(record) { 
-    const safe = sanitizzaRicarica(record); let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx ? safe : r) : [...ricariche, safe]; nuove = ricalcolaKmParziali(nuove.sort((a,b)=>a.data.localeCompare(b.data))); setRicariche(nuove); syncToSheets(nuove); showToast(editIdx!==null ? '✅ Aggiornata e salvata!' : '✅ Salvata!'); setEditIdx(null); setView('home');
+    const safe = sanitizzaRicarica(record); let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx ? safe : r) : [...ricariche, safe]; nuove = ricalcolaKmParziali(nuove.sort((a,b)=>(a.km||0)-(b.km||0))); setRicariche(nuove); syncToSheets(nuove); showToast(editIdx!==null ? '✅ Aggiornata e salvata!' : '✅ Salvata!'); setEditIdx(null); setView('home');
   }
 
   function cancellaRicarica(idx) {
@@ -379,7 +385,7 @@ export default function App() {
       try {
         const data=JSON.parse(ev.target.result);
         if (data.ricariche) {
-          setRicariche(ricalcolaKmParziali(data.ricariche.sort((a,b)=>a.data.localeCompare(b.data)).map(sanitizzaRicarica)));
+          setRicariche(ricalcolaKmParziali(data.ricariche.sort((a,b)=>(a.km||0)-(b.km||0)).map(sanitizzaRicarica)));
           if (data.settings) setSettings({...DEFAULT_SETTINGS,...data.settings});
           showToast('✅ Dati importati!'); setView('home');
         }
@@ -396,7 +402,8 @@ export default function App() {
       try {
         // SheetJS legge xlsx, xls, csv, ods — tutto
         const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
-        const ws = wb.Sheets[wb.SheetNames[0]];
+        const sheetName = wb.SheetNames.find(n => n.toLowerCase().trim() === 'dati') || wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
         // Converti in array di array (raw)
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         if (rows.length < 2) { showToast('❌ File vuoto o non valido', '#ef4444'); return; }
@@ -423,7 +430,9 @@ export default function App() {
         const iDopo    = col(['dopo', 'end', 'fine', '% dopo', '%dopo']);
         const iKwh     = col(['kwh eff', 'kwh_eff', 'effettivi', 'kwh ricaricati', 'kwh']);
         const iPrezzo  = col(['prezzo', 'euro/kwh', '€/kwh', 'price', 'tariffa']);
-        const iCosto   = col(['costo', 'cost', 'spesa', 'euro', '€']);
+        const iCosto   = col(['costo €', 'costo euro', 'cost€', '€ tot']).valueOf() >= 0
+          ? col(['costo €', 'costo euro', 'cost€', '€ tot'])
+          : headers.findIndex(h => h.trim() === 'costo' || h.trim() === 'cost' || h.trim() === 'spesa');
         const iKwh100  = col(['kwh/100', 'kwh100', 'consumo', 'efficienza']);
         const iLuogo   = col(['luogo', 'dove', 'location', 'posto', 'stazione']);
 
@@ -475,7 +484,7 @@ export default function App() {
         }
 
         if (!nuove.length) { showToast('❌ Nessun dato riconosciuto', '#ef4444'); return; }
-        const ordinate = ricalcolaKmParziali(nuove.sort((a,b) => a.data.localeCompare(b.data)).map(sanitizzaRicarica));
+        const ordinate = ricalcolaKmParziali(nuove.sort((a,b) => (a.km||0) - (b.km||0)).map(sanitizzaRicarica));
         setRicariche(ordinate);
         showToast(`✅ Importate ${ordinate.length} ricariche!`);
         setView('home');
@@ -528,7 +537,7 @@ export default function App() {
     if(!perMese[key]) perMese[key]=[];
     perMese[key].push({...r,idx:i});
   });
-  Object.keys(perMese).forEach(k=>perMese[k].sort((a,b)=>new Date(b.data)-new Date(a.data)));
+  Object.keys(perMese).forEach(k=>perMese[k].sort((a,b)=>(b.km||0)-(a.km||0)));
 
   const perMeseChart={};
   ricariche.forEach(r=>{
@@ -680,7 +689,7 @@ export default function App() {
                   <div style={{ border:`1px solid ${S.border}`, borderTop:'none', borderRadius:'0 0 14px 14px', overflow:'hidden' }}>
                     {lista.map(r=>{
                       const d=new Date(r.data);
-                      const dataStr=String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+                      const dataStr=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
                       return (
                         <div key={r.idx} style={{ padding:'14px 16px', background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', gap:8 }}>
                           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -699,7 +708,7 @@ export default function App() {
                             <div style={{ fontSize:'0.8rem', color:S.text2, lineHeight:1.6 }}>
                               {r.prezzoKwh?'€'+r.prezzoKwh+'/kWh':'—'}
                               {r.kmParziali?'  ·  +'+r.kmParziali+' km':''}
-                              {r.km?'  ·  '+r.km.toLocaleString('it')+' km tot.':''}
+                              {r.km?'  ·  '+r.km.toLocaleString('it')+' km tot':''}
                             </div>
                             <div style={{ textAlign:'right' }}>
                               <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.green }}>€{(r.costo||0).toFixed(2)}</div>
