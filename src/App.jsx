@@ -8,7 +8,12 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyb70PcCzlVoACCdodey
 
 async function syncToSheets(ricariche) {
   try {
-    const encoded = encodeURIComponent(JSON.stringify(ricariche));
+    const ricaricheSheets = ricariche.map(r => ({
+      ...r,
+      pctPrima: r.pctPrima > 1 ? r.pctPrima / 100 : r.pctPrima,
+      pctDopo:  r.pctDopo  > 1 ? r.pctDopo  / 100 : r.pctDopo,
+    }));
+    const encoded = encodeURIComponent(JSON.stringify(ricaricheSheets));
     await fetch(SHEETS_URL + '?action=write&data=' + encoded);
   } catch(e) { console.error('Sync to Sheets failed:', e); }
 }
@@ -22,23 +27,21 @@ async function syncFromSheets() {
 }
 
 function today() { return new Date().toISOString().split('T')[0]; }
-
 function toNum(x, def = 0) { const n = Number(x); return Number.isFinite(n) ? n : def; }
+
 function normalizzaData(d) {
   if (!d) return '';
-  // già in formato YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(String(d))) return String(d).slice(0,10);
-  // formato lungo tipo "Fri Apr 10 2026 09:00:00 GMT+0200"
   const dt = new Date(d);
   if (!isNaN(dt)) return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
   return String(d).slice(0,10);
 }
+
 function sanitizzaRicarica(r) {
   const pctPrima  = toNum(r?.pctPrima  ?? r?.percPrima,  0);
   const pctDopo   = toNum(r?.pctDopo   ?? r?.percDopo,   0);
   const kwhEff    = toNum(r?.kwhEff,   0);
   const prezzoKwh = toNum(r?.prezzoKwh ?? r?.prezzoKWh ?? r?.prezzo, 0);
-  // ricalcola costo se mancante o zero
   const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
   const costo     = (prezzoKwh > 0 && kwhEff > 0) ? kwhEff * prezzoKwh : (costoRaw > 0 ? costoRaw : 0);
   const luogo = (() => {
@@ -54,6 +57,7 @@ function sanitizzaRicarica(r) {
     kmParziali: r?.kmParziali == null ? null : (Number.isFinite(Number(r.kmParziali)) ? Number(r.kmParziali) : null),
   };
 }
+
 function useToast() {
   const [toast, setToast] = useState(null);
   const show = (msg, color = '#10b981') => {
@@ -144,7 +148,6 @@ function ConfirmDialog({ messaggio, onConfirm, onCancel }) {
   );
 }
 
-// Modal di importazione
 function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', display:'flex', alignItems:'flex-end', justifyContent:'center', padding:0 }}>
@@ -156,29 +159,24 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
           </div>
           <button onClick={onClose} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:20, color:S.text2, width:32, height:32, fontSize:'1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
         </div>
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-          {/* JSON */}
           <button
             onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=onImportJSON; inp.click(); onClose(); }}
-            style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text, transition:'all 0.2s' }}
+            style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}
           >
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>💾</div>
             <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#a78bfa', letterSpacing:'0.06em' }}>Backup JSON</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>Ripristina un backup<br/>completo precedente</div>
           </button>
-
-          {/* XLSX / CSV / Sheets */}
           <button
             onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv'; inp.onchange=onImportFoglio; inp.click(); onClose(); }}
-            style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text, transition:'all 0.2s' }}
+            style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}
           >
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>📊</div>
             <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:S.accent, letterSpacing:'0.06em' }}>Excel / Sheets</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>xlsx · xls · csv · ods<br/>Google Sheets export</div>
           </button>
         </div>
-
         <button onClick={onClose} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor:'pointer' }}>
           Annulla
         </button>
@@ -352,8 +350,15 @@ export default function App() {
     }
   }
 
- function salvaRicarica(record) { 
-    const safe = sanitizzaRicarica(record); let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx ? safe : r) : [...ricariche, safe]; nuove = ricalcolaKmParziali(nuove.sort((a,b)=>(a.km||0)-(b.km||0))); setRicariche(nuove); syncToSheets(nuove); showToast(editIdx!==null ? '✅ Aggiornata e salvata!' : '✅ Salvata!'); setEditIdx(null); setView('home');
+  function salvaRicarica(record) {
+    const safe = sanitizzaRicarica(record);
+    let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx ? safe : r) : [...ricariche, safe];
+    nuove = ricalcolaKmParziali(nuove.sort((a,b)=>(a.km||0)-(b.km||0)));
+    setRicariche(nuove);
+    syncToSheets(nuove);
+    showToast(editIdx!==null ? '✅ Aggiornata e salvata!' : '✅ Salvata!');
+    setEditIdx(null);
+    setView('home');
   }
 
   function cancellaRicarica(idx) {
@@ -400,15 +405,11 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        // SheetJS legge xlsx, xls, csv, ods — tutto
         const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
         const sheetName = wb.SheetNames.find(n => n.toLowerCase().trim() === 'dati') || wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
-        // Converti in array di array (raw)
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         if (rows.length < 2) { showToast('❌ File vuoto o non valido', '#ef4444'); return; }
-
-        // Trova la riga header (cerca parole chiave)
         let headerIdx = 0;
         for (let i = 0; i < Math.min(5, rows.length); i++) {
           const r = rows[i].map(c => String(c).toLowerCase());
@@ -417,8 +418,6 @@ export default function App() {
           }
         }
         const headers = rows[headerIdx].map(c => String(c).toLowerCase().trim());
-
-        // Mappa colonne flessibile — cerca per nome
         const col = (keywords) => {
           const idx = headers.findIndex(h => keywords.some(k => h.includes(k)));
           return idx >= 0 ? idx : -1;
@@ -430,7 +429,7 @@ export default function App() {
         const iDopo    = col(['dopo', 'end', 'fine', '% dopo', '%dopo']);
         const iKwh     = col(['kwh eff', 'kwh_eff', 'effettivi', 'kwh ricaricati', 'kwh']);
         const iPrezzo  = col(['prezzo', 'euro/kwh', '€/kwh', 'price', 'tariffa']);
-        const iCosto   = col(['costo €', 'costo euro', 'cost€', '€ tot']).valueOf() >= 0
+        const iCosto   = col(['costo €', 'costo euro', 'cost€', '€ tot']) >= 0
           ? col(['costo €', 'costo euro', 'cost€', '€ tot'])
           : headers.findIndex(h => h.trim() === 'costo' || h.trim() === 'cost' || h.trim() === 'spesa');
         const iKwh100  = col(['kwh/100', 'kwh100', 'consumo', 'efficienza']);
@@ -443,14 +442,11 @@ export default function App() {
             return `${y}-${m}-${d}`;
           }
           const s = String(val).trim();
-          // gg/mm/aaaa
           if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
             const [gg,mm,aaaa] = s.split('/');
             return `${aaaa}-${mm.padStart(2,'0')}-${gg.padStart(2,'0')}`;
           }
-          // aaaa-mm-gg già ok
           if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-          // numero seriale Excel (giorni dal 1/1/1900)
           const n = parseFloat(s);
           if (!isNaN(n) && n > 40000) {
             const d = new Date(Math.round((n - 25569) * 86400 * 1000));
@@ -463,20 +459,21 @@ export default function App() {
         for (let i = headerIdx + 1; i < rows.length; i++) {
           const row = rows[i];
           if (row.every(c => c === '' || c === null || c === undefined)) continue;
-
           const data    = parseData(iData >= 0 ? row[iData] : null);
           const kwhEff  = parseFloat(iKwh >= 0 ? row[iKwh] : 0) || 0;
           if (!data || !kwhEff) continue;
+
+          let pctPrima = iPrima >= 0 ? parseFloat(row[iPrima]) || 0 : 0;
+          let pctDopo  = iDopo  >= 0 ? parseFloat(row[iDopo])  || 0 : 0;
+          if (pctPrima <= 1 && pctPrima > 0) pctPrima = pctPrima * 100;
+          if (pctDopo  <= 1 && pctDopo  > 0) pctDopo  = pctDopo  * 100;
 
           nuove.push({
             data,
             luogo:    iLuogo >= 0  ? String(row[iLuogo] || '').toUpperCase() || null : null,
             km:       iKm >= 0     ? parseFloat(row[iKm])   || null : null,
             kmParziali: iKmParz >= 0 ? parseFloat(row[iKmParz]) || null : null,
-            pctPrima: iPrima >= 0  ? parseFloat(row[iPrima]) || 0 : 0,
-            pctDopo:  iDopo >= 0   ? parseFloat(row[iDopo])  || 0 : 0,
-            kwhEff,
-            kwhTeor:  0,
+            pctPrima, pctDopo, kwhEff, kwhTeor: 0,
             prezzoKwh: iPrezzo >= 0 ? parseFloat(row[iPrezzo]) || 0 : 0,
             costo:    iCosto >= 0  ? parseFloat(row[iCosto])  || 0 : 0,
             kwh100:   iKwh100 >= 0 ? parseFloat(row[iKwh100]) || null : null,
@@ -511,20 +508,6 @@ export default function App() {
     } catch(err) {
       showToast('❌ Errore esportazione', '#ef4444');
     }
-  }
-
-  function esportaJSONAuto(nuoveRicariche, nuoveSettings) {
-    const data = new Date();
-    const nome = `MGS5_${data.getFullYear()}${String(data.getMonth()+1).padStart(2,'0')}${String(data.getDate()).padStart(2,'0')}.json`;
-    const contenuto = JSON.stringify({ ricariche: nuoveRicariche, settings: nuoveSettings, esportato: data.toISOString() }, null, 2);
-    try {
-      const a = document.createElement('a');
-      a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(contenuto);
-      a.download = nome;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch(err) {}
   }
 
   const costoTot=ricariche.reduce((s,r)=>s+r.costo,0);
@@ -620,13 +603,11 @@ export default function App() {
 
       <div style={{ padding:'16px 16px 120px' }}>
 
-        {/* HOME */}
         {view==='home'&&<>
           {!ricariche.length?(
             <div style={{ textAlign:'center', padding:'60px 20px', color:S.text2 }}>
               <div style={{ fontSize:'4rem', marginBottom:16, opacity:0.4 }}>🔋</div>
               <div style={{ fontSize:'1rem', marginBottom:24 }}>Nessuna ricarica.<br/>Premi + per aggiungere.</div>
-              {/* TASTO IMPORTA anche nella home vuota */}
               <button
                 onClick={()=>setShowImport(true)}
                 style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'14px 28px', background:'rgba(0,229,255,0.1)', border:`1px solid rgba(0,229,255,0.3)`, borderRadius:40, color:S.accent, fontSize:'0.85rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}
@@ -635,7 +616,6 @@ export default function App() {
               </button>
             </div>
           ):(() => {
-            // Calcola progressivo CASA globale per ogni mese (ordinato cronologicamente)
             const chiavi = Object.keys(perMese).sort();
             let accCasaGlobale = 0;
             const progCasaPerMese = {};
@@ -652,9 +632,6 @@ export default function App() {
             const listaAsc=[...lista].reverse();
             let acc=0; const progMap={};
             listaAsc.forEach(r=>{acc+=r.costo;progMap[r.idx]=acc;});
-            const progMese = acc;
-            const progCasa = progCasaPerMese[key];
-            // primo mese aperto di default, gli altri chiusi
             const aperto = key in mesiAperti ? mesiAperti[key] : keyIdx===0;
             const toggleMese = () => setMesiAperti(prev=>({...prev,[key]:!aperto}));
             const listaCasa = lista.filter(r=>(r.luogo||'').toUpperCase()==='CASA');
@@ -712,7 +689,7 @@ export default function App() {
                             </div>
                             <div style={{ textAlign:'right' }}>
                               <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.green }}>€{(r.costo||0).toFixed(2)}</div>
-                              <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.accent }}>↑€{(progMap[r.idx]||0).toFixed(2)}</div>
+                              <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.accent }}>→€{(progMap[r.idx]||0).toFixed(2)}</div>
                             </div>
                           </div>
                         </div>
@@ -726,20 +703,17 @@ export default function App() {
           })()}
         </>}
 
-        {/* AGGIUNGI */}
         {view==='add'&&(
           <FormRicarica settings={settings} ricariche={ricariche} editIdx={editIdx}
             onSave={salvaRicarica} onCancel={editIdx!==null?annullaModifica:null} showToast={showToast}/>
         )}
 
-        {/* GRAFICI */}
         {view==='charts'&&<>
           <Card><CardTitle>Costo mensile (€)</CardTitle><BarChart data={chartMensile} color={S.accent}/></Card>
           <Card><CardTitle>kWh / 100km per ricarica</CardTitle><LineChart data={chartEff} color={S.accent2}/></Card>
           <Card><CardTitle>Prezzo €/kWh nel tempo</CardTitle><LineChart data={chartPrezzo} color="#f59e0b"/></Card>
         </>}
 
-        {/* ESPORTA */}
         {view==='export'&&<>
           <Card>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
@@ -776,7 +750,6 @@ export default function App() {
           </Card>
         </>}
 
-        {/* CONFIG */}
         {view==='settings'&&<>
           <Card>
             <CardTitle>Impostazioni</CardTitle>
@@ -797,7 +770,7 @@ export default function App() {
           <Card>
             <CardTitle>Preset % batteria</CardTitle>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              {[{label:'% Prima — op.1',key:'p1a'},{label:'% Prima — op.2',key:'p1b'},{label:'% Dopo — op.1',key:'p2a'},{label:'% Dopo — op.2',key:'p2b'}].map(f=>(
+              {[{label:'% Prima – op.1',key:'p1a'},{label:'% Prima – op.2',key:'p1b'},{label:'% Dopo – op.1',key:'p2a'},{label:'% Dopo – op.2',key:'p2b'}].map(f=>(
                 <div key={f.key}>
                   <div style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase', marginBottom:6 }}>{f.label}</div>
                   <input type="number" value={settings[f.key]} onChange={e=>setSettings({...settings,[f.key]:parseFloat(e.target.value)||0})} style={{...inputSt,textAlign:'right'}}/>
