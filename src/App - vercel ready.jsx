@@ -6,10 +6,15 @@ const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott',
 const DEFAULT_SETTINGS = { batteria: 64, prezzo: 0.50, targa: 'MGS5', p1a: 20, p1b: 30, p2a: 80, p2b: 100 };
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyb70PcCzlVoACCdodeyJ2vmhg9v1_NaEAIlkj_jpBvE4RuFK0kO5d24zsKkAC2Ccwc/exec';
 
+// ─── Storage: usa localStorage se disponibile, altrimenti memoria ───
 const memStore = {};
 const storage = {
-  get(key) { try { return localStorage.getItem(key); } catch { return memStore[key] ?? null; } },
-  set(key, val) { try { localStorage.setItem(key, val); } catch { memStore[key] = val; } }
+  get(key) {
+    try { return localStorage.getItem(key); } catch { return memStore[key] ?? null; }
+  },
+  set(key, val) {
+    try { localStorage.setItem(key, val); } catch { memStore[key] = val; }
+  }
 };
 
 async function syncToSheets(ricariche) {
@@ -30,14 +35,6 @@ async function syncFromSheets() {
     const json = await res.json();
     return json.data || [];
   } catch(e) { console.error('Sync from Sheets failed:', e); return null; }
-}
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
-}
-
-function mapsUrl(nome) {
-  return 'https://www.google.com/maps/search/' + encodeURIComponent(nome);
 }
 
 function today() { return new Date().toISOString().split('T')[0]; }
@@ -67,7 +64,6 @@ function sanitizzaRicarica(r) {
   return {
     ...r, luogo, data: normalizzaData(r?.data), kwhEff, kwhTeor: toNum(r?.kwhTeor, 0),
     costo, prezzoKwh, pctPrima, pctDopo,
-    stazione:   r?.stazione   ? String(r.stazione).trim()   : '',
     kwh100:     r?.kwh100     == null ? null : (Number.isFinite(Number(r.kwh100))     ? Number(r.kwh100)     : null),
     km:         r?.km         == null ? null : (Number.isFinite(Number(r.km))         ? Number(r.km)         : null),
     kmParziali: r?.kmParziali == null ? null : (Number.isFinite(Number(r.kmParziali)) ? Number(r.kmParziali) : null),
@@ -76,7 +72,10 @@ function sanitizzaRicarica(r) {
 
 function useToast() {
   const [toast, setToast] = useState(null);
-  const show = (msg, color = '#10b981') => { setToast({ msg, color }); setTimeout(() => setToast(null), 2500); };
+  const show = (msg, color = '#10b981') => {
+    setToast({ msg, color });
+    setTimeout(() => setToast(null), 2500);
+  };
   return { toast, show };
 }
 
@@ -89,6 +88,13 @@ function ricalcolaKmParziali(lista) {
       return { ...r, kmParziali: kmParziali || r.kmParziali, kwh100 };
     }
     return r;
+  });
+}
+
+// ─── Registra Service Worker per PWA offline ───
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }
 
@@ -173,14 +179,18 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
           <button onClick={onClose} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:20, color:S.text2, width:32, height:32, fontSize:'1rem', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-          <button onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=onImportJSON; inp.click(); onClose(); }}
-            style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
+          <button
+            onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=onImportJSON; inp.click(); onClose(); }}
+            style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}
+          >
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>💾</div>
             <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#a78bfa', letterSpacing:'0.06em' }}>Backup JSON</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>Ripristina un backup<br/>completo precedente</div>
           </button>
-          <button onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls,.csv,.ods'; inp.onchange=onImportFoglio; inp.click(); onClose(); }}
-            style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
+          <button
+            onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls,.csv,.ods'; inp.onchange=onImportFoglio; inp.click(); onClose(); }}
+            style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}
+          >
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>📊</div>
             <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:S.accent, letterSpacing:'0.06em' }}>Excel / Sheets</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>xlsx · xls · csv · ods<br/>Google Sheets export</div>
@@ -194,22 +204,22 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
 
 function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToast }) {
   const ex = editIdx !== null ? ricariche[editIdx] : null;
-  const [fData,     setFData]     = useState(ex ? ex.data : today());
-  const [fLuogo,    setFLuogo]    = useState(ex ? (ex.luogo||'') : '');
-  const [fStazione, setFStazione] = useState(ex ? (ex.stazione||'') : '');
-  const [fKm,       setFKm]       = useState(ex && ex.km !== null ? String(ex.km) : '');
-  const [fKmParz,   setFKmParz]   = useState(ex && ex.kmParziali !== null ? String(ex.kmParziali) : '');
-  const [fPrima,    setFPrima]    = useState(ex ? String(ex.pctPrima) : '');
-  const [fDopo,     setFDopo]     = useState(ex ? String(ex.pctDopo) : '');
-  const [fKwh,      setFKwh]      = useState(ex ? String(ex.kwhEff) : '');
-  const [fPrezzo,   setFPrezzo]   = useState(ex ? String(ex.prezzoKwh) : String(settings.prezzo));
+  const [fData,   setFData]   = useState(ex ? ex.data : today());
+  const [fLuogo,  setFLuogo]  = useState(ex ? (ex.luogo||'') : '');
+  const [fKm,     setFKm]     = useState(ex && ex.km !== null ? String(ex.km) : '');
+  const [fKmParz, setFKmParz] = useState(ex && ex.kmParziali !== null ? String(ex.kmParziali) : '');
+  const [fPrima,  setFPrima]  = useState(ex ? String(ex.pctPrima) : '');
+  const [fDopo,   setFDopo]   = useState(ex ? String(ex.pctDopo) : '');
+  const [fKwh,    setFKwh]    = useState(ex ? String(ex.kwhEff) : '');
+  const [fPrezzo, setFPrezzo] = useState(ex ? String(ex.prezzoKwh) : String(settings.prezzo));
 
   const prima=parseFloat(fPrima)||0, dopo=parseFloat(fDopo)||0;
   const diff=dopo-prima, kwhTeor=settings.batteria*(diff/100);
   const kwhEff=parseFloat(fKwh)||kwhTeor;
   const prezzo=parseFloat(fPrezzo)||settings.prezzo;
   const costo=kwhEff*prezzo;
-  const kmParzN=parseFloat(fKmParz), kmN=parseFloat(fKm);
+  const kmParzN=parseFloat(fKmParz);
+  const kmN=parseFloat(fKm);
 
   let kmParzAuto=null;
   if (!isNaN(kmN)&&kmN>0&&!(kmParzN>0)) {
@@ -224,9 +234,8 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
     if (!fData||prima<=0||dopo<=0){showToast('⚠️ Compila data e %','#f59e0b');return;}
     if (dopo<=prima){showToast('⚠️ % dopo > % prima','#f59e0b');return;}
     onSave({
-      data:fData, luogo:fLuogo||null, stazione:fStazione||'',
-      km:parseFloat(fKm)||null, pctPrima:prima, pctDopo:dopo,
-      kwhEff, kwhTeor, prezzoKwh:prezzo, costo,
+      data:fData, luogo:fLuogo||null, km:parseFloat(fKm)||null,
+      pctPrima:prima, pctDopo:dopo, kwhEff, kwhTeor, prezzoKwh:prezzo, costo,
       kmParziali:kmParzEff||null, kwh100:kmParzEff?(kwhEff/kmParzEff)*100:null
     });
   }
@@ -245,19 +254,6 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
           <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>Dove si ricarica</label>
           <input type="text" value={fLuogo} onChange={e=>setFLuogo(e.target.value.toUpperCase())} placeholder="CASA..." style={inputSt}/>
         </div>
-
-        {/* NUOVO CAMPO STAZIONE */}
-        <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:6 }}>
-          <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>📍 Stazione (apre Maps)</label>
-          <input type="text" value={fStazione} onChange={e=>setFStazione(e.target.value)} placeholder="es. Esselunga Milano Via Roma" style={inputSt}/>
-          {fStazione && (
-            <a href={mapsUrl(fStazione)} target="_blank" rel="noreferrer"
-              style={{ fontSize:'0.65rem', color:S.accent, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
-              📍 Anteprima su Maps →
-            </a>
-          )}
-        </div>
-
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
           <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>KM Totali</label>
           <input type="number" value={fKm} onChange={e=>setFKm(e.target.value)} placeholder="0" style={inputSt}/>
@@ -342,11 +338,18 @@ export default function App() {
   const { toast, show: showToast }  = useToast();
   const [syncing,    setSyncing]    = useState(false);
 
-  useEffect(() => { try { storage.set('mgs5_ricariche', JSON.stringify(ricariche)); } catch {} }, [ricariche]);
-  useEffect(() => { try { storage.set('mgs5_settings',  JSON.stringify(settings));  } catch {} }, [settings]);
+  useEffect(() => {
+    try { storage.set('mgs5_ricariche', JSON.stringify(ricariche)); } catch {}
+  }, [ricariche]);
+
+  useEffect(() => {
+    try { storage.set('mgs5_settings', JSON.stringify(settings)); } catch {}
+  }, [settings]);
 
   async function sincronizzaVersoSheet() {
-    setSyncing(true); await syncToSheets(ricariche); setSyncing(false);
+    setSyncing(true);
+    await syncToSheets(ricariche);
+    setSyncing(false);
     showToast('☁️ Dati inviati a Google Sheets!');
   }
 
@@ -355,33 +358,42 @@ export default function App() {
     const data = await syncFromSheets();
     setSyncing(false);
     if (data && data.length > 0) {
-      setRicariche(ricalcolaKmParziali(data.sort((a,b)=>(a.km||0)-(b.km||0)).map(sanitizzaRicarica)));
-      showToast('☁️ Dati importati da Google Sheets!'); setView('home');
-    } else { showToast('❌ Nessun dato trovato', '#ef4444'); }
+      const nuove = ricalcolaKmParziali(data.sort((a,b) => (a.km||0) - (b.km||0)).map(sanitizzaRicarica));
+      setRicariche(nuove);
+      showToast('☁️ Dati importati da Google Sheets!');
+      setView('home');
+    } else {
+      showToast('❌ Nessun dato trovato', '#ef4444');
+    }
   }
 
   function salvaRicarica(record) {
     const safe = sanitizzaRicarica(record);
-    let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx?safe:r) : [...ricariche, safe];
+    let nuove = editIdx!==null ? ricariche.map((r,i)=>i===editIdx ? safe : r) : [...ricariche, safe];
     nuove = ricalcolaKmParziali(nuove.sort((a,b)=>(a.km||0)-(b.km||0)));
-    setRicariche(nuove); syncToSheets(nuove);
-    showToast(editIdx!==null?'✅ Aggiornata e salvata!':'✅ Salvata!');
-    setEditIdx(null); setView('home');
+    setRicariche(nuove);
+    syncToSheets(nuove);
+    showToast(editIdx!==null ? '✅ Aggiornata e salvata!' : '✅ Salvata!');
+    setEditIdx(null);
+    setView('home');
   }
 
   function cancellaRicarica(idx) {
     const nuove = ricalcolaKmParziali(ricariche.filter((_,i)=>i!==idx));
-    setRicariche(nuove); syncToSheets(nuove);
-    setConfirmIdx(null); showToast('🗑 Eliminata');
+    setRicariche(nuove);
+    syncToSheets(nuove);
+    setConfirmIdx(null);
+    showToast('🗑 Eliminata');
   }
 
   function apriModifica(idx) { setEditIdx(idx); setView('add'); }
   function annullaModifica() { setEditIdx(null); setView('home'); }
 
   function esportaCSV() {
-    const header='Data,KM Totali,KM Parziali,% Prima,% Dopo,kWh Effettivi,Prezzo Euro/kWh,Costo Euro,kWh/100km,Luogo,Stazione\n';
-    const rows=ricariche.map(r=>[r.data,r.km||'',r.kmParziali||'',r.pctPrima,r.pctDopo,(r.kwhEff||0).toFixed(3),r.prezzoKwh,(r.costo||0).toFixed(3),r.kwh100?(r.kwh100||0).toFixed(2):'',r.luogo||'',r.stazione||''].join(',')).join('\n');
-    scarica('ricariche.csv','text/csv',header+rows); showToast('📊 CSV esportato');
+    const header='Data,KM Totali,KM Parziali,% Prima,% Dopo,kWh Effettivi,Prezzo Euro/kWh,Costo Euro,kWh/100km,Luogo\n';
+    const rows=ricariche.map(r=>[r.data,r.km||'',r.kmParziali||'',r.pctPrima,r.pctDopo,(r.kwhEff||0).toFixed(3),r.prezzoKwh,(r.costo||0).toFixed(3),r.kwh100?(r.kwh100||0).toFixed(2):'',r.luogo||''].join(',')).join('\n');
+    scarica('ricariche.csv','text/csv',header+rows);
+    showToast('📊 CSV esportato');
   }
 
   function esportaJSON() {
@@ -402,7 +414,8 @@ export default function App() {
         }
       } catch { showToast('❌ File non valido','#ef4444'); }
     };
-    reader.readAsText(file); e.target.value='';
+    reader.readAsText(file);
+    e.target.value='';
   }
 
   function importaFoglio(e) {
@@ -410,79 +423,98 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const wb = XLSX.read(ev.target.result, { type:'array', cellDates:true });
-        const sheetName = wb.SheetNames.find(n=>n.toLowerCase().trim()==='dati') || wb.SheetNames[0];
+        const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+        const sheetName = wb.SheetNames.find(n => n.toLowerCase().trim() === 'dati') || wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
-        if (rows.length < 2) { showToast('❌ File vuoto o non valido','#ef4444'); return; }
-        let headerIdx=0;
-        for (let i=0; i<Math.min(5,rows.length); i++) {
-          const r=rows[i].map(c=>String(c).toLowerCase());
-          if (r.some(c=>c.includes('kwh')||c.includes('data')||c.includes('prima')||c.includes('dopo'))) { headerIdx=i; break; }
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (rows.length < 2) { showToast('❌ File vuoto o non valido', '#ef4444'); return; }
+        let headerIdx = 0;
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          const r = rows[i].map(c => String(c).toLowerCase());
+          if (r.some(c => c.includes('kwh') || c.includes('data') || c.includes('prima') || c.includes('dopo'))) {
+            headerIdx = i; break;
+          }
         }
-        const headers=rows[headerIdx].map(c=>String(c).toLowerCase().trim());
-        const col=(kws)=>{ const i=headers.findIndex(h=>kws.some(k=>h.includes(k))); return i>=0?i:-1; };
-        const iData=col(['data','date','giorno']), iKm=col(['km tot','km_tot','totali','odometro']);
-        const iKmParz=col(['km parz','km_parz','parziali']), iPrima=col(['prima','start','% prima']);
-        const iDopo=col(['dopo','end','% dopo']), iKwh=col(['kwh eff','kwh_eff','effettivi','kwh']);
-        const iPrezzo=col(['prezzo','euro/kwh','€/kwh']), iCosto=col(['costo','cost','spesa']);
-        const iKwh100=col(['kwh/100','kwh100','consumo']), iLuogo=col(['luogo','dove','location']);
-        const iStazione=col(['stazione','station','colonnina','punto di ricarica']);
+        const headers = rows[headerIdx].map(c => String(c).toLowerCase().trim());
+        const col = (kws) => { const i = headers.findIndex(h => kws.some(k => h.includes(k))); return i >= 0 ? i : -1; };
+        const iData   = col(['data','date','giorno']);
+        const iKm     = col(['km tot','km_tot','totali','odometro']);
+        const iKmParz = col(['km parz','km_parz','parziali','percorsi']);
+        const iPrima  = col(['prima','start','inizio','% prima','%prima']);
+        const iDopo   = col(['dopo','end','fine','% dopo','%dopo']);
+        const iKwh    = col(['kwh eff','kwh_eff','effettivi','kwh ricaricati','kwh']);
+        const iPrezzo = col(['prezzo','euro/kwh','€/kwh','price','tariffa']);
+        const iCosto  = col(['costo €','costo euro','cost€','€ tot','costo','cost','spesa']);
+        const iKwh100 = col(['kwh/100','kwh100','consumo','efficienza']);
+        const iLuogo  = col(['luogo','dove','location','posto','stazione']);
 
         function parseData(val) {
           if (!val) return null;
-          if (val instanceof Date) return val.getFullYear()+'-'+String(val.getMonth()+1).padStart(2,'0')+'-'+String(val.getDate()).padStart(2,'0');
-          const s=String(val).trim();
-          if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) { const [gg,mm,aaaa]=s.split('/'); return `${aaaa}-${mm.padStart(2,'0')}-${gg.padStart(2,'0')}`; }
+          if (val instanceof Date) {
+            return val.getFullYear()+'-'+String(val.getMonth()+1).padStart(2,'0')+'-'+String(val.getDate()).padStart(2,'0');
+          }
+          const s = String(val).trim();
+          if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+            const [gg,mm,aaaa] = s.split('/');
+            return `${aaaa}-${mm.padStart(2,'0')}-${gg.padStart(2,'0')}`;
+          }
           if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-          const n=parseFloat(s);
-          if (!isNaN(n)&&n>40000) return new Date(Math.round((n-25569)*86400*1000)).toISOString().split('T')[0];
+          const n = parseFloat(s);
+          if (!isNaN(n) && n > 40000) return new Date(Math.round((n-25569)*86400*1000)).toISOString().split('T')[0];
           return null;
         }
 
-        const nuove=[];
-        for (let i=headerIdx+1; i<rows.length; i++) {
-          const row=rows[i];
-          if (row.every(c=>c===''||c===null||c===undefined)) continue;
-          const data=parseData(iData>=0?row[iData]:null);
-          const kwhEff=parseFloat(iKwh>=0?row[iKwh]:0)||0;
-          if (!data||!kwhEff) continue;
-          let pctPrima=iPrima>=0?parseFloat(row[iPrima])||0:0;
-          let pctDopo =iDopo >=0?parseFloat(row[iDopo]) ||0:0;
-          if (pctPrima>0&&pctPrima<=1) pctPrima*=100;
-          if (pctDopo >0&&pctDopo <=1) pctDopo *=100;
+        const nuove = [];
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (row.every(c => c === '' || c === null || c === undefined)) continue;
+          const data   = parseData(iData >= 0 ? row[iData] : null);
+          const kwhEff = parseFloat(iKwh >= 0 ? row[iKwh] : 0) || 0;
+          if (!data || !kwhEff) continue;
+          let pctPrima = iPrima >= 0 ? parseFloat(row[iPrima]) || 0 : 0;
+          let pctDopo  = iDopo  >= 0 ? parseFloat(row[iDopo])  || 0 : 0;
+          if (pctPrima > 0 && pctPrima <= 1) pctPrima *= 100;
+          if (pctDopo  > 0 && pctDopo  <= 1) pctDopo  *= 100;
           nuove.push({
-            data, kwhEff, kwhTeor:0,
-            luogo:    iLuogo   >=0?String(row[iLuogo]  ||'').toUpperCase()||null:null,
-            stazione: iStazione>=0?String(row[iStazione]||'').trim():'',
-            km:       iKm      >=0?parseFloat(row[iKm])    ||null:null,
-            kmParziali:iKmParz >=0?parseFloat(row[iKmParz])||null:null,
+            data, kwhEff, kwhTeor: 0,
+            luogo:      iLuogo  >= 0 ? String(row[iLuogo]||'').toUpperCase()||null : null,
+            km:         iKm     >= 0 ? parseFloat(row[iKm])    || null : null,
+            kmParziali: iKmParz >= 0 ? parseFloat(row[iKmParz])|| null : null,
             pctPrima, pctDopo,
-            prezzoKwh:iPrezzo  >=0?parseFloat(row[iPrezzo])||0:0,
-            costo:    iCosto   >=0?parseFloat(row[iCosto]) ||0:0,
-            kwh100:   iKwh100  >=0?parseFloat(row[iKwh100])||null:null,
+            prezzoKwh:  iPrezzo >= 0 ? parseFloat(row[iPrezzo])|| 0 : 0,
+            costo:      iCosto  >= 0 ? parseFloat(row[iCosto]) || 0 : 0,
+            kwh100:     iKwh100 >= 0 ? parseFloat(row[iKwh100])|| null : null,
           });
         }
-        if (!nuove.length) { showToast('❌ Nessun dato riconosciuto','#ef4444'); return; }
-        const ordinate=ricalcolaKmParziali(nuove.sort((a,b)=>(a.km||0)-(b.km||0)).map(sanitizzaRicarica));
-        setRicariche(ordinate); showToast(`✅ Importate ${ordinate.length} ricariche!`); setView('home');
-      } catch(err) { console.error(err); showToast('❌ Errore nel file','#ef4444'); }
+        if (!nuove.length) { showToast('❌ Nessun dato riconosciuto', '#ef4444'); return; }
+        const ordinate = ricalcolaKmParziali(nuove.sort((a,b)=>(a.km||0)-(b.km||0)).map(sanitizzaRicarica));
+        setRicariche(ordinate);
+        showToast(`✅ Importate ${ordinate.length} ricariche!`);
+        setView('home');
+      } catch (err) {
+        console.error(err);
+        showToast('❌ Errore nel file', '#ef4444');
+      }
     };
-    reader.readAsArrayBuffer(file); e.target.value='';
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
   }
 
   function scarica(nome, tipo, contenuto) {
     try {
-      const a=document.createElement('a');
-      a.href='data:'+tipo+';charset=utf-8,'+encodeURIComponent(contenuto);
-      a.download=nome; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    } catch { showToast('❌ Errore esportazione','#ef4444'); }
+      const a = document.createElement('a');
+      a.href = 'data:' + tipo + ';charset=utf-8,' + encodeURIComponent(contenuto);
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch { showToast('❌ Errore esportazione', '#ef4444'); }
   }
 
-  const costoTot=ricariche.reduce((s,r)=>s+r.costo,0);
-  const kmMax=ricariche.length?Math.max(...ricariche.map(r=>r.km||0)):null;
+  const costoTot = ricariche.reduce((s,r)=>s+r.costo,0);
+  const kmMax    = ricariche.length ? Math.max(...ricariche.map(r=>r.km||0)) : null;
 
-  const perMese={};
+  const perMese = {};
   ricariche.forEach((r,i)=>{
     const d=new Date(r.data);
     const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
@@ -491,19 +523,19 @@ export default function App() {
   });
   Object.keys(perMese).forEach(k=>perMese[k].sort((a,b)=>(b.km||0)-(a.km||0)));
 
-  const perMeseChart={};
+  const perMeseChart = {};
   ricariche.forEach(r=>{
     const d=new Date(r.data);
     const k=MESI_BREVI[d.getMonth()]+'\''+String(d.getFullYear()).slice(2);
     if(!perMeseChart[k]) perMeseChart[k]={costo:0};
     perMeseChart[k].costo+=r.costo;
   });
-  const chartMensile=Object.entries(perMeseChart).map(([x,v])=>({x,y:v.costo}));
-  const chartEff=ricariche.filter(r=>r.kwh100).map(r=>{const d=new Date(r.data);return{x:String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1),y:r.kwh100};});
-  const chartPrezzo=ricariche.filter(r=>r.prezzoKwh>0).map(r=>{const d=new Date(r.data);return{x:String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1),y:r.prezzoKwh};});
+  const chartMensile = Object.entries(perMeseChart).map(([x,v])=>({x,y:v.costo}));
+  const chartEff     = ricariche.filter(r=>r.kwh100).map(r=>{const d=new Date(r.data);return{x:String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1),y:r.kwh100};});
+  const chartPrezzo  = ricariche.filter(r=>r.prezzoKwh>0).map(r=>{const d=new Date(r.data);return{x:String(d.getDate()).padStart(2,'0')+'/'+(d.getMonth()+1),y:r.prezzoKwh};});
 
-  const Card=({children,style={}})=><div style={{background:S.bg2,border:`1px solid ${S.border}`,borderRadius:16,padding:16,marginBottom:12,...style}}>{children}</div>;
-  const CardTitle=({children,style={}})=><div style={{fontSize:'0.65rem',textTransform:'uppercase',letterSpacing:'0.12em',color:S.text2,marginBottom:12,...style}}>{children}</div>;
+  const Card      = ({children,style={}}) => <div style={{background:S.bg2,border:`1px solid ${S.border}`,borderRadius:16,padding:16,marginBottom:12,...style}}>{children}</div>;
+  const CardTitle = ({children,style={}}) => <div style={{fontSize:'0.65rem',textTransform:'uppercase',letterSpacing:'0.12em',color:S.text2,marginBottom:12,...style}}>{children}</div>;
 
   return (
     <div style={{ fontFamily:'system-ui,sans-serif', background:S.bg, color:S.text, minHeight:'100vh', maxWidth:480, margin:'0 auto', position:'relative' }}>
@@ -576,28 +608,29 @@ export default function App() {
               </button>
             </div>
           ):(() => {
-            const chiavi=Object.keys(perMese).sort();
-            let accCasaGlobale=0;
-            const progCasaPerMese={};
-            chiavi.forEach(k=>{
-              [...perMese[k]].reverse().forEach(r=>{ if((r.luogo||'').toUpperCase()==='CASA') accCasaGlobale+=r.costo; });
-              progCasaPerMese[k]=accCasaGlobale;
+            const chiavi = Object.keys(perMese).sort();
+            let accCasaGlobale = 0;
+            const progCasaPerMese = {};
+            chiavi.forEach(k => {
+              const listaAsc = [...perMese[k]].reverse();
+              listaAsc.forEach(r => { if ((r.luogo||'').toUpperCase() === 'CASA') accCasaGlobale += r.costo; });
+              progCasaPerMese[k] = accCasaGlobale;
             });
-            return chiavi.slice().reverse().map((key,keyIdx)=>{
-              const [anno,mese]=key.split('-');
-              const lista=perMese[key];
-              const totCosto=lista.reduce((s,r)=>s+r.costo,0);
-              const totKwh=lista.reduce((s,r)=>s+r.kwhEff,0);
+            return chiavi.slice().reverse().map((key, keyIdx) => {
+              const [anno,mese] = key.split('-');
+              const lista = perMese[key];
+              const totCosto = lista.reduce((s,r)=>s+r.costo,0);
+              const totKwh   = lista.reduce((s,r)=>s+r.kwhEff,0);
               let acc=0; const progMap={};
               [...lista].reverse().forEach(r=>{acc+=r.costo;progMap[r.idx]=acc;});
-              const aperto=key in mesiAperti?mesiAperti[key]:keyIdx===0;
-              const toggleMese=()=>setMesiAperti(prev=>({...prev,[key]:!aperto}));
-              const listaCasa=lista.filter(r=>(r.luogo||'').toUpperCase()==='CASA');
-              const totCostoCasa=listaCasa.reduce((s,r)=>s+r.costo,0);
-              const totKwhCasa=listaCasa.reduce((s,r)=>s+r.kwhEff,0);
+              const aperto = key in mesiAperti ? mesiAperti[key] : keyIdx===0;
+              const toggleMese = () => setMesiAperti(prev=>({...prev,[key]:!aperto}));
+              const listaCasa = lista.filter(r=>(r.luogo||'').toUpperCase()==='CASA');
+              const totCostoCasa = listaCasa.reduce((s,r)=>s+r.costo,0);
+              const totKwhCasa   = listaCasa.reduce((s,r)=>s+r.kwhEff,0);
               return (
                 <div key={key} style={{ marginBottom:10 }}>
-                  <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,58,237,0.1))', border:`1px solid ${S.border}`, borderRadius:aperto?'14px 14px 0 0':14, cursor:'pointer', userSelect:'none' }}>
+                  <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,58,237,0.1))', border:`1px solid ${S.border}`, borderRadius: aperto ? '14px 14px 0 0' : 14, cursor:'pointer', userSelect:'none' }}>
                     <div style={{ display:'flex', alignItems:'center', flexShrink:0, width:140 }}>
                       <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent, flexShrink:0, marginRight:8 }}/>
                       <div>
@@ -620,7 +653,7 @@ export default function App() {
                       <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:'#34d399', lineHeight:1.6 }}>{(totKwhCasa||0).toFixed(1)} kWh</div>
                     </div>
                   </div>
-                  {aperto&&(
+                  {aperto && (
                     <div style={{ border:`1px solid ${S.border}`, borderTop:'none', borderRadius:'0 0 14px 14px', overflow:'hidden' }}>
                       {lista.map(r=>{
                         const d=new Date(r.data);
@@ -628,24 +661,13 @@ export default function App() {
                         return (
                           <div key={r.idx} style={{ padding:'14px 16px', background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', gap:8 }}>
                             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                              <div style={{ fontFamily:'monospace', fontSize:'0.85rem', color:S.text2, fontWeight:600 }}>
-                                {dataStr}{r.luogo?' · '+r.luogo:''}
-                              </div>
+                              <div style={{ fontFamily:'monospace', fontSize:'0.85rem', color:S.text2, fontWeight:600 }}>{dataStr}{r.luogo?' · '+r.luogo:''}</div>
                               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                                 <div style={{ fontFamily:'monospace', fontSize:'0.8rem', color:S.text2 }}>{Math.round(r.pctPrima*(r.pctPrima<=1?100:1))}→{Math.round(r.pctDopo*(r.pctDopo<=1?100:1))}%</div>
                                 <button onClick={e=>{e.stopPropagation();apriModifica(r.idx);}} style={{ background:'none', border:'none', color:S.accent, cursor:'pointer', padding:'4px 6px', fontSize:'1rem' }}>✏️</button>
                                 <button onClick={e=>{e.stopPropagation();setConfirmIdx(r.idx);}} style={{ background:'none', border:'none', color:'#ef4444', cursor:'pointer', padding:'4px 8px', fontSize:'1.1rem', fontWeight:700 }}>✕</button>
                               </div>
                             </div>
-
-                            {/* LINK STAZIONE MAPS */}
-                            {r.stazione&&(
-                              <a href={mapsUrl(r.stazione)} target="_blank" rel="noreferrer"
-                                style={{ fontSize:'0.75rem', color:S.accent, textDecoration:'none', display:'inline-flex', alignItems:'center', gap:4 }}>
-                                📍 {r.stazione}
-                              </a>
-                            )}
-
                             <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between' }}>
                               <div style={{ fontSize:'1.3rem', fontWeight:700, fontFamily:'monospace', color:S.text }}>{(r.kwhEff||0).toFixed(2)} kWh</div>
                               <div style={{ fontFamily:'monospace', fontSize:'0.9rem', color:'#f59e0b' }}>{r.kwh100?r.kwh100.toFixed(2)+' kWh/100km':'—'}</div>
