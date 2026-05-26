@@ -580,7 +580,7 @@ export default function App() {
                 <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6 }}>Ripristino<br/>completo</div>
               </button>
             </div>
-            <a href="https://docs.google.com/spreadsheets/d/1msCKdhLM2HZ8Nb0T6qP5rOIz_Chj71HTMIIio4zENiA/edit?gid=1262952548#gid=1262952548" target="_blank" rel="noreferrer" style={{ display:'block', width:'100%', padding:'13px 0', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:12, color:S.accent, fontSize:'0.85rem', fontWeight:700, textAlign:'center', textDecoration:'none', marginBottom:8, boxSizing:'border-box' }}>📊 Apri Google Sheet</a>
+            <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=1256271822#gid=1256271822" target="_blank" rel="noreferrer" style={{ display:'block', width:'100%', padding:'13px 0', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:12, color:S.accent, fontSize:'0.85rem', fontWeight:700, textAlign:'center', textDecoration:'none', marginBottom:8, boxSizing:'border-box' }}>📊 Apri Google Sheet</a>
             <button onClick={()=>setShowExport(false)} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor:'pointer' }}>Annulla</button>
           </div>
         </div>
@@ -590,7 +590,7 @@ export default function App() {
       <div style={{ position:'sticky', top:0, zIndex:100, background:'rgba(10,15,30,0.95)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${S.border}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ fontSize:'1.1rem', fontWeight:800, letterSpacing:'0.05em' }}>MG<span style={{color:S.accent}}>S5</span></div>
-          <a href="https://docs.google.com/spreadsheets/d/1msCKdhLM2HZ8Nb0T6qP5rOIz_Chj71HTMIIio4zENiA/edit?gid=1262952548#gid=1262952548" target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.25)', borderRadius:20, color:S.accent, fontSize:'0.65rem', fontWeight:700, textDecoration:'none' }}>📊</a>
+          <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=1256271822#gid=1256271822" target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.25)', borderRadius:20, color:S.accent, fontSize:'0.65rem', fontWeight:700, textDecoration:'none' }}>📊</a>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ textAlign:'right' }}>
