@@ -86,7 +86,7 @@ function ricalcolaKmParziali(lista) {
   });
 }
 
-}
+
 
 function BarChart({ data, color = '#e53935' }) {
   if (!data.length) return <div style={{ height:160, display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', fontSize:'0.75rem' }}>Nessun dato</div>;
