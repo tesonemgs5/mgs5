@@ -1,0 +1,25 @@
+name: Auto Push
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  auto-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+
+      - name: Commit and push changes
+        run: |
+          git add .
+          git diff --staged --quiet || git commit -m "Auto-push: $(date '+%Y-%m-%d %H:%M:
