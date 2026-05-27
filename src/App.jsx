@@ -86,13 +86,9 @@ function ricalcolaKmParziali(lista) {
   });
 }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
 }
 
-function BarChart({ data, color = '#00e5ff' }) {
+function BarChart({ data, color = '#e53935' }) {
   if (!data.length) return <div style={{ height:160, display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', fontSize:'0.75rem' }}>Nessun dato</div>;
   const max = Math.max(...data.map(d => d.y));
   return (
@@ -107,7 +103,7 @@ function BarChart({ data, color = '#00e5ff' }) {
   );
 }
 
-function LineChart({ data, color = '#7c3aed' }) {
+function LineChart({ data, color = '#c0392b' }) {
   if (data.length < 2) return <div style={{ height:160, display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', fontSize:'0.75rem' }}>Servono almeno 2 punti</div>;
   const w=300, h=120;
   const ys=data.map(d=>d.y), minY=Math.min(...ys), maxY=Math.max(...ys);
@@ -131,8 +127,8 @@ function LineChart({ data, color = '#7c3aed' }) {
 
 const S = {
   bg:'#0a0f1e', bg2:'rgba(255,255,255,0.04)',
-  border:'rgba(0,229,255,0.15)', accent:'#00e5ff',
-  accent2:'#7c3aed', green:'#10b981', text:'#e2e8f0', text2:'#94a3b8'
+  border:'rgba(229,57,53,0.15)', accent:'#e53935',
+  accent2:'#c0392b', green:'#10b981', text:'#e2e8f0', text2:'#94a3b8'
 };
 const inputSt = {
   background:'rgba(255,255,255,0.06)', border:`1px solid ${S.border}`, borderRadius:10,
@@ -140,8 +136,8 @@ const inputSt = {
   width:'100%', outline:'none', boxSizing:'border-box'
 };
 const chipSt = {
-  padding:'4px 10px', background:'rgba(0,229,255,0.08)',
-  border:'1px solid rgba(0,229,255,0.2)', borderRadius:20,
+  padding:'4px 10px', background:'rgba(229,57,53,0.08)',
+  border:'1px solid rgba(229,57,53,0.2)', borderRadius:20,
   color:S.accent, fontFamily:'monospace', fontSize:'0.75rem', cursor:'pointer'
 };
 
@@ -174,13 +170,13 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
           <button onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json'; inp.onchange=onImportJSON; inp.click(); onClose(); }}
-            style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
+            style={{ background:'rgba(192,57,43,0.1)', border:'1px solid rgba(192,57,43,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>💾</div>
-            <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#a78bfa', letterSpacing:'0.06em' }}>Backup JSON</div>
+            <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#ff6b6b', letterSpacing:'0.06em' }}>Backup JSON</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>Ripristina un backup<br/>completo precedente</div>
           </button>
           <button onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='.xlsx,.xls,.csv,.ods'; inp.onchange=onImportFoglio; inp.click(); onClose(); }}
-            style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
+            style={{ background:'rgba(229,57,53,0.08)', border:'1px solid rgba(229,57,53,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
             <div style={{ fontSize:'2.2rem', marginBottom:8 }}>📊</div>
             <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:S.accent, letterSpacing:'0.06em' }}>Excel / Sheets</div>
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>xlsx · xls · csv · ods<br/>Google Sheets export</div>
@@ -265,7 +261,7 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
             {[settings.p2a,settings.p2b].map(v=><button key={v} onClick={()=>setFDopo(String(v))} style={chipSt}>{v}%</button>)}
           </div>
         </div>
-        <div style={{ gridColumn:'1/-1', background:'rgba(0,229,255,0.04)', border:`1px solid ${S.border}`, borderRadius:10, padding:10, display:'flex', justifyContent:'space-between' }}>
+        <div style={{ gridColumn:'1/-1', background:'rgba(229,57,53,0.04)', border:`1px solid ${S.border}`, borderRadius:10, padding:10, display:'flex', justifyContent:'space-between' }}>
           <div>
             <div style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Differenza %</div>
             <div style={{ fontFamily:'monospace', fontSize:'1rem', color:S.accent }}>{diff>0?diff.toFixed(0)+' %':'—'}</div>
@@ -512,18 +508,18 @@ export default function App() {
               <button onClick={()=>setShowExport(false)} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:20, color:S.text2, width:32, height:32, fontSize:'1rem', cursor:'pointer' }}>✕</button>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-              <button onClick={()=>{esportaCSV();setShowExport(false);}} style={{ background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
+              <button onClick={()=>{esportaCSV();setShowExport(false);}} style={{ background:'rgba(229,57,53,0.08)', border:'1px solid rgba(229,57,53,0.3)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
                 <div style={{ fontSize:'2.2rem', marginBottom:8 }}>📊</div>
                 <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:S.accent }}>CSV</div>
                 <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6 }}>Apri in Excel<br/>o Google Sheets</div>
               </button>
-              <button onClick={()=>{esportaJSON();setShowExport(false);}} style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
+              <button onClick={()=>{esportaJSON();setShowExport(false);}} style={{ background:'rgba(192,57,43,0.1)', border:'1px solid rgba(192,57,43,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
                 <div style={{ fontSize:'2.2rem', marginBottom:8 }}>💾</div>
-                <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#a78bfa' }}>Backup JSON</div>
+                <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#ff6b6b' }}>Backup JSON</div>
                 <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6 }}>Ripristino<br/>completo</div>
               </button>
             </div>
-            <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=433900317#gid=433900317" target="_blank" rel="noreferrer" style={{ display:'block', width:'100%', padding:'13px 0', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:12, color:S.accent, fontSize:'0.85rem', fontWeight:700, textAlign:'center', textDecoration:'none', marginBottom:8, boxSizing:'border-box' }}>📊 Apri Google Sheet</a>
+            <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=433900317#gid=433900317" target="_blank" rel="noreferrer" style={{ display:'block', width:'100%', padding:'13px 0', background:'rgba(229,57,53,0.08)', border:'1px solid rgba(229,57,53,0.3)', borderRadius:12, color:S.accent, fontSize:'0.85rem', fontWeight:700, textAlign:'center', textDecoration:'none', marginBottom:8, boxSizing:'border-box' }}>📊 Apri Google Sheet</a>
             <button onClick={()=>setShowExport(false)} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor:'pointer' }}>Annulla</button>
           </div>
         </div>
@@ -531,8 +527,8 @@ export default function App() {
 
       <div style={{ position:'sticky', top:0, zIndex:100, background:'rgba(10,15,30,0.95)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${S.border}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ fontSize:'1.1rem', fontWeight:800, letterSpacing:'0.05em' }}>MG<span style={{color:'#00e5ff'}}>S5</span></div>
-          <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=433900317#gid=433900317" target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.25)', borderRadius:20, color:S.accent, fontSize:'0.65rem', fontWeight:700, textDecoration:'none' }}>📊</a>
+          <div style={{ fontSize:'1.1rem', fontWeight:800, letterSpacing:'0.05em' }}>MG<span style={{color:'#e53935'}}>S5</span></div>
+          <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=433900317#gid=433900317" target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', background:'rgba(229,57,53,0.08)', border:'1px solid rgba(229,57,53,0.25)', borderRadius:20, color:S.accent, fontSize:'0.65rem', fontWeight:700, textDecoration:'none' }}>📊</a>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
           <div style={{ textAlign:'right' }}>
@@ -552,7 +548,7 @@ export default function App() {
             <div style={{ textAlign:'center', padding:'60px 20px', color:S.text2 }}>
               <div style={{ fontSize:'4rem', marginBottom:16, opacity:0.4 }}>🔋</div>
               <div style={{ fontSize:'1rem', marginBottom:24 }}>Nessuna ricarica.<br/>Premi + per aggiungere.</div>
-              <button onClick={()=>setShowImport(true)} style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'14px 28px', background:'rgba(0,229,255,0.1)', border:`1px solid rgba(0,229,255,0.3)`, borderRadius:40, color:S.accent, fontSize:'0.85rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}>
+              <button onClick={()=>setShowImport(true)} style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'14px 28px', background:'rgba(229,57,53,0.1)', border:`1px solid rgba(229,57,53,0.3)`, borderRadius:40, color:S.accent, fontSize:'0.85rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}>
                 <span style={{ fontSize:'1.1rem' }}>📥</span> Importa dati
               </button>
             </div>
@@ -569,7 +565,7 @@ export default function App() {
               const totCostoCasa=listaCasa.reduce((s,r)=>s+r.costo,0), totKwhCasa=listaCasa.reduce((s,r)=>s+r.kwhEff,0);
               return (
                 <div key={key} style={{ marginBottom:10 }}>
-                  <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,58,237,0.1))', border:`1px solid ${S.border}`, borderRadius:aperto?'14px 14px 0 0':14, cursor:'pointer', userSelect:'none' }}>
+                  <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(229,57,53,0.1),rgba(192,57,43,0.1))', border:`1px solid ${S.border}`, borderRadius:aperto?'14px 14px 0 0':14, cursor:'pointer', userSelect:'none' }}>
                     <div style={{ display:'flex', alignItems:'center', flexShrink:0, width:140 }}>
                       <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent, flexShrink:0, marginRight:8 }}/>
                       <div>
@@ -644,8 +640,8 @@ export default function App() {
         {view==='export'&&<>
           <Card>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              <button onClick={()=>setShowImport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(0,229,255,0.1)', border:`1px solid rgba(0,229,255,0.3)`, borderRadius:14, color:S.accent, fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}><span style={{ fontSize:'1.6rem' }}>📥</span> Importa</button>
-              <button onClick={()=>setShowExport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:14, color:'#a78bfa', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}><span style={{ fontSize:'1.6rem' }}>📤</span> Esporta</button>
+              <button onClick={()=>setShowImport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(229,57,53,0.1)', border:`1px solid rgba(229,57,53,0.3)`, borderRadius:14, color:S.accent, fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}><span style={{ fontSize:'1.6rem' }}>📥</span> Importa</button>
+              <button onClick={()=>setShowExport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(192,57,43,0.1)', border:'1px solid rgba(192,57,43,0.35)', borderRadius:14, color:'#ff6b6b', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}><span style={{ fontSize:'1.6rem' }}>📤</span> Esporta</button>
               <button onClick={sincronizzaDaSheet} disabled={syncing} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.35)', borderRadius:14, color:'#10b981', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer', opacity:syncing?0.6:1 }}><span style={{ fontSize:'1.6rem' }}>☁️</span> {syncing?'...':'Da Sheet'}</button>
               <button onClick={sincronizzaVersoSheet} disabled={syncing} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.35)', borderRadius:14, color:'#f59e0b', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer', opacity:syncing?0.6:1 }}><span style={{ fontSize:'1.6rem' }}>📡</span> {syncing?'...':'A Sheet'}</button>
             </div>
