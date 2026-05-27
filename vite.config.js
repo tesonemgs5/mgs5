@@ -15,7 +15,7 @@ export default defineConfig({
         name: 'MGS5 Tracker',
         short_name: 'MGS5',
         description: 'Tracker ricariche auto elettrica MG5',
-        theme_color: '#0a0f1e',
+        theme_color: '#e53935',
         background_color: '#0a0f1e',
         display: 'standalone',
         orientation: 'portrait',
