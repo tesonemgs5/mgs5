@@ -692,8 +692,8 @@ export default function App() {
           <Card style={{ borderColor:'rgba(239,68,68,0.3)' }}>
             <CardTitle style={{ color:'#ef4444' }}>⚠️ Zona pericolosa</CardTitle>
             <button onClick={()=>setConfirmIdx('all')} style={{ width:'100%', padding:12, background:'transparent', border:'1px solid rgba(239,68,68,0.4)', borderRadius:10, color:'#ef4444', fontSize:'0.85rem', cursor:'pointer' }}>🗑 Cancella tutti i dati</button>
-        </Card>
-        <Card>
+          </Card>
+          <Card>
             <CardTitle>☁️ Google Sheets</CardTitle>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>URL Script</label>
