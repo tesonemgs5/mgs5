@@ -697,6 +697,27 @@ export default function App() {
             <button onClick={()=>setConfirmIdx('all')} style={{ width:'100%', padding:12, background:'transparent', border:'1px solid rgba(239,68,68,0.4)', borderRadius:10, color:'#ef4444', fontSize:'0.85rem', cursor:'pointer' }}>🗑 Cancella tutti i dati</button>
           </Card>
           <Card>
+            <CardTitle>☁️ Google Sheets (opzionale)</CardTitle>
+            <div style={{ fontSize:'0.75rem', color:S.text2, marginBottom:12, lineHeight:1.6 }}>
+              Collega un tuo foglio Google per sincronizzare i dati su più dispositivi.
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:12 }}>
+              <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>URL Apps Script</label>
+              <input type="text" defaultValue={getSheetsUrl()} onChange={e=>storage.set('mgs5_sheetsUrl', e.target.value.trim())} placeholder="https://script.google.com/macros/s/..." style={{...inputSt, fontSize:'0.7rem'}}/>
+              <div style={{ fontSize:'0.6rem', color:S.text2, marginTop:2 }}>Incolla qui l'URL del tuo Google Apps Script dopo averlo pubblicato</div>
+            </div>
+            <div style={{ background:'rgba(0,229,255,0.04)', border:`1px solid ${S.border}`, borderRadius:10, padding:12 }}>
+              <div style={{ fontSize:'0.7rem', fontWeight:700, color:S.accent, marginBottom:8 }}>Come configurare:</div>
+              <div style={{ fontSize:'0.65rem', color:S.text2, lineHeight:1.8 }}>
+                1. Vai su <span style={{ color:S.accent }}>script.google.com</span> → Nuovo progetto<br/>
+                2. Incolla il codice da <span style={{ color:S.accent }}>google-apps-script.js</span><br/>
+                3. Clicca Distribuisci → Nuova distribuzione → App web<br/>
+                4. Accesso: <strong style={{ color:S.text }}>Chiunque</strong> → Distribuisci<br/>
+                5. Copia l'URL e incollalo qui sopra
+              </div>
+            </div>
+          </Card>
+          <Card>
             <CardTitle>☁️ Google Sheets</CardTitle>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>URL Script</label>
