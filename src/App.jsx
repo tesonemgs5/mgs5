@@ -4,7 +4,8 @@ import * as XLSX from 'xlsx';
 const MESI_NOMI = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
 const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 const DEFAULT_SETTINGS = { batteria: 64, prezzo: 0.50, targa: 'MGS5', p1a: 20, p1b: 30, p2a: 80, p2b: 100 };
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyb70PcCzlVoACCdodeyJ2vmhg9v1_NaEAIlkj_jpBvE4RuFK0kO5d24zsKkAC2Ccwc/exec';
+const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyb70PcCzlVoACCdodeyJ2vmhg9v1_NaEAIlkj_jpBvE4RuFK0kO5d24zsKkAC2Ccwc/exec';
+function getSheetsUrl() { return storage.get('mgs5_sheetsUrl') || DEFAULT_SHEETS_URL; }
 
 const memStore = {};
 const storage = {
@@ -14,19 +15,21 @@ const storage = {
 
 async function syncToSheets(ricariche) {
   try {
-    const ricaricheSheets = ricariche.map(r => ({
+    // Ordina per km decrescente: km più alto → riga 2 del foglio
+    const ordinate = [...ricariche].sort((a, b) => (b.km || 0) - (a.km || 0));
+    const ricaricheSheets = ordinate.map(r => ({
       ...r,
       pctPrima: r.pctPrima > 1 ? r.pctPrima / 100 : r.pctPrima,
       pctDopo:  r.pctDopo  > 1 ? r.pctDopo  / 100 : r.pctDopo,
     }));
     const encoded = encodeURIComponent(JSON.stringify(ricaricheSheets));
-    await fetch(SHEETS_URL + '?action=write&data=' + encoded);
+    await fetch(getSheetsUrl() + '?action=write&data=' + encoded);
   } catch(e) { console.error('Sync to Sheets failed:', e); }
 }
 
 async function syncFromSheets() {
   try {
-    const res = await fetch(SHEETS_URL + '?action=read');
+    const res = await fetch(getSheetsUrl() + '?action=read');
     const json = await res.json();
     return json.data || [];
   } catch(e) { console.error('Sync from Sheets failed:', e); return null; }
@@ -689,6 +692,14 @@ export default function App() {
           <Card style={{ borderColor:'rgba(239,68,68,0.3)' }}>
             <CardTitle style={{ color:'#ef4444' }}>⚠️ Zona pericolosa</CardTitle>
             <button onClick={()=>setConfirmIdx('all')} style={{ width:'100%', padding:12, background:'transparent', border:'1px solid rgba(239,68,68,0.4)', borderRadius:10, color:'#ef4444', fontSize:'0.85rem', cursor:'pointer' }}>🗑 Cancella tutti i dati</button>
+        </Card>
+        <Card>
+            <CardTitle>☁️ Google Sheets</CardTitle>
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>URL Script</label>
+              <input type="text" defaultValue={getSheetsUrl()} onChange={e=>storage.set('mgs5_sheetsUrl', e.target.value.trim())} placeholder="https://script.google.com/..." style={{...inputSt, fontSize:'0.7rem'}}/>
+              <div style={{ fontSize:'0.6rem', color:S.text2, marginTop:2 }}>Modifica solo se hai un nuovo script Apps Script</div>
+            </div>
           </Card>
         </>}
       </div>
