@@ -52,7 +52,8 @@ function sanitizzaRicarica(r) {
   const kwhEff    = toNum(r?.kwhEff,  0);
   const prezzoKwh = toNum(r?.prezzoKwh ?? r?.prezzoKWh ?? r?.prezzo, 0);
   const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
-  const costo     = (prezzoKwh > 0 && kwhEff > 0) ? kwhEff * prezzoKwh : (costoRaw > 0 ? costoRaw : 0);
+  const costoCalc = kwhEff * prezzoKwh;
+  const costo     = costoCalc > 0 ? costoCalc : (costoRaw > 0 ? costoRaw : 0);
   const luogo = (() => {
     const l = (r?.luogo || r?.dove || r?.location || '').toString().trim().toUpperCase();
     if (l) return l;
