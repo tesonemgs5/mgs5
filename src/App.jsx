@@ -717,14 +717,7 @@ export default function App() {
               </div>
             </div>
           </Card>
-          <Card>
-            <CardTitle>☁️ Google Sheets</CardTitle>
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>URL Script</label>
-              <input type="text" defaultValue={getSheetsUrl()} onChange={e=>storage.set('mgs5_sheetsUrl', e.target.value.trim())} placeholder="https://script.google.com/..." style={{...inputSt, fontSize:'0.7rem'}}/>
-              <div style={{ fontSize:'0.6rem', color:S.text2, marginTop:2 }}>Modifica solo se hai un nuovo script Apps Script</div>
-            </div>
-          </Card>
+          
         </>}
       </div>
 
