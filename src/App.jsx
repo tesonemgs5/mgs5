@@ -22,8 +22,10 @@ async function syncToSheets(ricariche) {
       pctPrima: r.pctPrima > 1 ? r.pctPrima / 100 : r.pctPrima,
       pctDopo:  r.pctDopo  > 1 ? r.pctDopo  / 100 : r.pctDopo,
     }));
-    const encoded = encodeURIComponent(JSON.stringify(ricaricheSheets));
-    await fetch(getSheetsUrl() + '?action=write&data=' + encoded);
+    await fetch(getSheetsUrl() + '?action=write', {
+      method: 'POST',
+      body: JSON.stringify(ricaricheSheets)
+    });
   } catch(e) { console.error('Sync to Sheets failed:', e); }
 }
 
