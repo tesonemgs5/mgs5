@@ -201,13 +201,14 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
 function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToast }) {
   const ex = editIdx !== null ? ricariche[editIdx] : null;
   const [fData,   setFData]   = useState(ex ? ex.data : today());
-  const [fLuogo,  setFLuogo]  = useState(ex ? (ex.luogo||'') : '');
+  const defaultLuogo = ex ? (ex.luogo||'') : '';
+const [fLuogo,  setFLuogo]  = useState(defaultLuogo);
   const [fKm,     setFKm]     = useState(ex && ex.km !== null ? String(ex.km) : '');
   const [fKmParz, setFKmParz] = useState(ex && ex.kmParziali !== null ? String(ex.kmParziali) : '');
-  const [fPrima,  setFPrima]  = useState(ex ? String(ex.pctPrima) : '');
-  const [fDopo,   setFDopo]   = useState(ex ? String(ex.pctDopo) : '');
+  const [fPrima,  setFPrima]  = useState(ex ? String(ex.pctPrima > 1 ? ex.pctPrima : ex.pctPrima * 100) : '');
+  const [fDopo,   setFDopo]   = useState(ex ? String(ex.pctDopo > 1 ? ex.pctDopo : ex.pctDopo * 100) : '');
   const [fKwh,    setFKwh]    = useState(ex ? String(ex.kwhEff) : '');
-  const [fPrezzo, setFPrezzo] = useState(ex ? String(ex.prezzoKwh) : String(settings.prezzo));
+  const [fPrezzo, setFPrezzo] = useState(ex ? String(ex.prezzoKwh) : (defaultLuogo === 'CASA' ? '0.2' : String(settings.prezzo)));
 
   const prima=parseFloat(fPrima)||0, dopo=parseFloat(fDopo)||0;
   const diff=dopo-prima, kwhTeor=settings.batteria*(diff/100);
