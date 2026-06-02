@@ -54,8 +54,7 @@ function sanitizzaRicarica(r) {
   const kwhEff    = toNum(r?.kwhEff,  0);
   const prezzoKwh = toNum(r?.prezzoKwh ?? r?.prezzoKWh ?? r?.prezzo, 0);
   const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
-  const costoCalc = kwhEff * prezzoKwh;
-  const costo     = costoCalc > 0 ? costoCalc : (costoRaw > 0 ? costoRaw : 0);
+  const costo = (kwhEff > 0 && prezzoKwh >= 0) ? (kwhEff * prezzoKwh) : (costoRaw > 0 ? costoRaw : 0);
   const luogo = (() => {
     const l = (r?.luogo || r?.dove || r?.location || '').toString().trim().toUpperCase();
     if (l) return l;
@@ -320,7 +319,15 @@ const [fLuogo,  setFLuogo]  = useState(defaultLuogo);
 export default function App() {
   const [view,       setView]       = useState('home');
   const [ricariche,  setRicariche]  = useState(() => {
-    try { const s = storage.get('mgs5_ricariche'); return s ? JSON.parse(s).map(sanitizzaRicarica) : []; } catch { return []; }
+    try { 
+      const s = storage.get('mgs5_ricariche'); 
+      if (!s) return [];
+      const parsed = JSON.parse(s);
+      return Array.isArray(parsed) ? parsed.map(sanitizzaRicarica) : []; 
+    } catch (e) { 
+      console.error("Errore lettura ricariche locali:", e);
+      return []; 
+    }
   });
   const [settings,   setSettings]   = useState(() => {
     try { const s = storage.get('mgs5_settings'); return s ? {...DEFAULT_SETTINGS,...JSON.parse(s)} : {...DEFAULT_SETTINGS}; } catch { return {...DEFAULT_SETTINGS}; }
@@ -339,10 +346,17 @@ export default function App() {
   useEffect(() => {
     async function autoSync() {
       setSyncing(true);
-      const data = await syncFromSheets();
+      const dataSheets = await syncFromSheets();
       setSyncing(false);
-      if (data && data.length > 0) {
-        setRicariche(ricalcolaKmParziali(data.sort((a,b)=>(a.km||0)-(b.km||0)).map(sanitizzaRicarica)));
+      if (dataSheets && dataSheets.length > 0) {
+        setRicariche(prevLocali => {
+          const remoteSanitizzate = dataSheets.map(sanitizzaRicarica);
+          const mappaUnione = new Map();
+          prevLocali.forEach(r => { const id = `${r.data}_${r.km||0}`; mappaUnione.set(id, r); });
+          remoteSanitizzate.forEach(r => { const id = `${r.data}_${r.km||0}`; mappaUnione.set(id, r); });
+          const unite = Array.from(mappaUnione.values());
+          return ricalcolaKmParziali(unite.sort((a, b) => (a.km || 0) - (b.km || 0)));
+        });
       }
     }
     autoSync();
@@ -482,6 +496,7 @@ export default function App() {
 
   const perMese={};
   ricariche.forEach((r,i)=>{
+    if (!r.data || isNaN(new Date(r.data).getTime())) return;
     const d=new Date(r.data), key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     if(!perMese[key]) perMese[key]=[];
     perMese[key].push({...r,idx:i});
@@ -490,6 +505,7 @@ export default function App() {
 
   const perMeseChart={};
   ricariche.forEach(r=>{
+    if (!r.data || isNaN(new Date(r.data).getTime())) return;
     const d=new Date(r.data), k=MESI_BREVI[d.getMonth()]+'\''+String(d.getFullYear()).slice(2);
     if(!perMeseChart[k]) perMeseChart[k]={costo:0};
     perMeseChart[k].costo+=r.costo;
