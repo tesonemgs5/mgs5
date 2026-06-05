@@ -15,7 +15,6 @@ const storage = {
 
 async function syncToSheets(ricariche) {
   try {
-    // Ordina per km decrescente: km più alto → riga 2 del foglio
     const ordinate = [...ricariche].sort((a, b) => (b.km || 0) - (a.km || 0));
     const ricaricheSheets = ordinate.map(r => ({
       ...r,
@@ -54,8 +53,7 @@ function sanitizzaRicarica(r) {
   const kwhEff    = toNum(r?.kwhEff,  0);
   const prezzoKwh = toNum(r?.prezzoKwh ?? r?.prezzoKWh ?? r?.prezzo, 0);
   const costoRaw  = toNum(r?.costo ?? r?.costoEuro ?? r?.euro, 0);
-  const costoCalc = kwhEff * prezzoKwh;
-  const costo     = costoCalc > 0 ? costoCalc : (costoRaw > 0 ? costoRaw : 0);
+  const costo = (kwhEff > 0 && prezzoKwh >= 0) ? (kwhEff * prezzoKwh) : (costoRaw > 0 ? costoRaw : 0);
   const luogo = (() => {
     const l = (r?.luogo || r?.dove || r?.location || '').toString().trim().toUpperCase();
     if (l) return l;
@@ -192,7 +190,7 @@ function ImportModal({ onImportJSON, onImportFoglio, onClose }) {
             <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6, lineHeight:1.5 }}>xlsx · xls · csv · ods<br/>Google Sheets export</div>
           </button>
         </div>
-        <button onClick={onClose} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor:'pointer' }}>Annulla</button>
+        <button onClick={onClose} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor={ pointer: 'pointer' } }}>Annulla</button>
       </div>
     </div>
   );
@@ -204,10 +202,15 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
   const [fLuogo,  setFLuogo]  = useState(ex ? (ex.luogo||'') : '');
   const [fKm,     setFKm]     = useState(ex && ex.km !== null ? String(ex.km) : '');
   const [fKmParz, setFKmParz] = useState(ex && ex.kmParziali !== null ? String(ex.kmParziali) : '');
-  const [fPrima,  setFPrima]  = useState(ex ? String(ex.pctPrima) : '');
-  const [fDopo,   setFDopo]   = useState(ex ? String(ex.pctDopo) : '');
+  const [fPrima,  setFPrima]  = useState(ex ? String(ex.pctPrima > 1 ? ex.pctPrima : ex.pctPrima * 100) : '');
+  const [fDopo,   setFDopo]   = useState(ex ? String(ex.pctDopo > 1 ? ex.pctDopo : ex.pctDopo * 100) : '');
   const [fKwh,    setFKwh]    = useState(ex ? String(ex.kwhEff) : '');
-  const [fPrezzo, setFPrezzo] = useState(ex ? String(ex.prezzoKwh) : String(settings.prezzo));
+  
+  // Correzione bug inizializzazione prezzo se caricamento da "CASA"
+  const [fPrezzo, setFPrezzo] = useState(() => {
+    if (ex) return String(ex.prezzoKwh);
+    return settings.prezzo ? String(settings.prezzo) : '0.5';
+  });
 
   const prima=parseFloat(fPrima)||0, dopo=parseFloat(fDopo)||0;
   const diff=dopo-prima, kwhTeor=settings.batteria*(diff/100);
@@ -224,7 +227,6 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
     if (prev) kmParzAuto=kmN-prev.km;
   }
   const kmParzEff=(kmParzN>0)?kmParzN:kmParzAuto;
-  const kwh100=kmParzEff?(kwhEff/kmParzEff)*100:null;
 
   function salva() {
     if (!fData||prima<=0||dopo<=0){showToast('⚠️ Compila data e %','#f59e0b');return;}
@@ -302,7 +304,7 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
         <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
           <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>kWh / 100km</label>
           <div style={{ fontFamily:'monospace', fontSize:'1.2rem', color:S.accent2, padding:'10px 12px', background:'rgba(255,255,255,0.06)', border:`1px solid ${S.border}`, borderRadius:10 }}>
-            {kwh100?kwh100.toFixed(2):'—'}
+            {kmParzEff && kwhEff ? ((kwhEff/kmParzEff)*100).toFixed(2) : '—'}
           </div>
         </div>
       </div>
@@ -319,7 +321,15 @@ function FormRicarica({ settings, ricariche, editIdx, onSave, onCancel, showToas
 export default function App() {
   const [view,       setView]       = useState('home');
   const [ricariche,  setRicariche]  = useState(() => {
-    try { const s = storage.get('mgs5_ricariche'); return s ? JSON.parse(s).map(sanitizzaRicarica) : []; } catch { return []; }
+    try { 
+      const s = storage.get('mgs5_ricariche'); 
+      if (!s) return [];
+      const parsed = JSON.parse(s);
+      return Array.isArray(parsed) ? parsed.map(sanitizzaRicarica) : []; 
+    } catch (e) { 
+      console.error("Errore lettura ricariche locali:", e);
+      return []; 
+    }
   });
   const [settings,   setSettings]   = useState(() => {
     try { const s = storage.get('mgs5_settings'); return s ? {...DEFAULT_SETTINGS,...JSON.parse(s)} : {...DEFAULT_SETTINGS}; } catch { return {...DEFAULT_SETTINGS}; }
@@ -338,10 +348,20 @@ export default function App() {
   useEffect(() => {
     async function autoSync() {
       setSyncing(true);
-      const data = await syncFromSheets();
+      const dataSheets = await syncFromSheets();
       setSyncing(false);
-      if (data && data.length > 0) {
-        setRicariche(ricalcolaKmParziali(data.sort((a,b)=>(a.km||0)-(b.km||0)).map(sanitizzaRicarica)));
+      if (dataSheets && dataSheets.length > 0) {
+        setRicariche(prevLocali => {
+          const remoteSanitizzate = dataSheets.map(sanitizzaRicarica);
+          const mappaUnione = new Map();
+          
+          // Correzione ID di unione includendo data, km e kwhEffettivi per prevenire sovrascritture di record duplicati a km 0
+          prevLocali.forEach(r => { const id = `${r.data}_${r.km||0}_${r.kwhEff||0}`; mappaUnione.set(id, r); });
+          remoteSanitizzate.forEach(r => { const id = `${r.data}_${r.km||0}_${r.kwhEff||0}`; mappaUnione.set(id, r); });
+          
+          const unite = Array.from(mappaUnione.values());
+          return ricalcolaKmParziali(unite.sort((a, b) => (a.km || 0) - (b.km || 0)));
+        });
       }
     }
     autoSync();
@@ -481,6 +501,7 @@ export default function App() {
 
   const perMese={};
   ricariche.forEach((r,i)=>{
+    if (!r.data || isNaN(new Date(r.data).getTime())) return;
     const d=new Date(r.data), key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     if(!perMese[key]) perMese[key]=[];
     perMese[key].push({...r,idx:i});
@@ -489,6 +510,7 @@ export default function App() {
 
   const perMeseChart={};
   ricariche.forEach(r=>{
+    if (!r.data || isNaN(new Date(r.data).getTime())) return;
     const d=new Date(r.data), k=MESI_BREVI[d.getMonth()]+'\''+String(d.getFullYear()).slice(2);
     if(!perMeseChart[k]) perMeseChart[k]={costo:0};
     perMeseChart[k].costo+=r.costo;
@@ -500,15 +522,27 @@ export default function App() {
   const Card=({children,style={}})=><div style={{background:S.bg2,border:`1px solid ${S.border}`,borderRadius:16,padding:16,marginBottom:12,...style}}>{children}</div>;
   const CardTitle=({children,style={}})=><div style={{fontSize:'0.65rem',textTransform:'uppercase',letterSpacing:'0.12em',color:S.text2,marginBottom:12,...style}}>{children}</div>;
 
+  const toggleMese = (key) => {
+    setMesiAperti(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
-    <div style={{ fontFamily:'system-ui,sans-serif', background:S.bg, color:S.text, minHeight:'100vh', maxWidth:480, margin:'0 auto', position:'relative' }}>
+    <div style={{ fontFamily:'system-ui,sans-serif', background:S.bg, color:S.text, minHeight:'100vh', maxWidth:480, margin:'0 auto', position:'relative', paddingBottom: 80 }}>
+      {toast && (
+        <div style={{ position:'fixed', top:20, left:'50%', transform:'translateX(-50%)', background:toast.color, color:'#fff', padding:'12px 24px', borderRadius:30, zIndex:999, fontWeight:600, fontSize:'0.9rem', boxShadow:'0 4px 12px rgba(0,0,0,0.3)' }}>
+          {toast.msg}
+        </div>
+      )}
+
       {confirmIdx!==null&&(
         <ConfirmDialog
           messaggio={confirmIdx==='all'?'Cancellare TUTTI i dati?':'Cancellare questa ricarica?'}
           onConfirm={()=>confirmIdx==='all'?(setRicariche([]),setConfirmIdx(null),showToast('🗑 Dati cancellati','#ef4444')):cancellaRicarica(confirmIdx)}
           onCancel={()=>setConfirmIdx(null)}/>
       )}
+      
       {showImport&&<ImportModal onImportJSON={importaJSON} onImportFoglio={importaFoglio} onClose={()=>setShowImport(false)}/>}
+      
       {showExport&&(
         <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
           <div style={{ background:'#111827', border:`1px solid ${S.border}`, borderTopLeftRadius:24, borderTopRightRadius:24, padding:28, width:'100%', maxWidth:480 }}>
@@ -524,203 +558,178 @@ export default function App() {
               </button>
               <button onClick={()=>{esportaJSON();setShowExport(false);}} style={{ background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:16, padding:'20px 12px', cursor:'pointer', textAlign:'center', color:S.text }}>
                 <div style={{ fontSize:'2.2rem', marginBottom:8 }}>💾</div>
-                <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#a78bfa' }}>Backup JSON</div>
-                <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6 }}>Ripristino<br/>completo</div>
+                <div style={{ fontSize:'0.8rem', fontWeight:800, textTransform:'uppercase', color:'#a78bfa' }}>JSON Backup</div>
+                <div style={{ fontSize:'0.62rem', color:S.text2, marginTop:6 }}>Salva un backup<br/>completo portabile</div>
               </button>
             </div>
-            <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=433900317#gid=433900317" target="_blank" rel="noreferrer" style={{ display:'block', width:'100%', padding:'13px 0', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.3)', borderRadius:12, color:S.accent, fontSize:'0.85rem', fontWeight:700, textAlign:'center', textDecoration:'none', marginBottom:8, boxSizing:'border-box' }}>📊 Apri Google Sheet</a>
             <button onClick={()=>setShowExport(false)} style={{ width:'100%', padding:'13px 0', background:'transparent', border:`1px solid rgba(255,255,255,0.1)`, borderRadius:12, color:S.text2, fontSize:'0.85rem', cursor:'pointer' }}>Annulla</button>
           </div>
         </div>
       )}
 
-      <div style={{ position:'sticky', top:0, zIndex:100, background:'rgba(10,15,30,0.95)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${S.border}`, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ fontSize:'1.1rem', fontWeight:800, letterSpacing:'0.05em' }}>MG<span style={{color:'#ef4444'}}>S5</span></div>
-          <a href="https://docs.google.com/spreadsheets/d/1egavj34-1EM3lY91kSikV48G7zxrnM7tOKdJ5GqPhY4/edit?gid=433900317#gid=433900317" target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:4, padding:'3px 9px', background:'rgba(0,229,255,0.08)', border:'1px solid rgba(0,229,255,0.25)', borderRadius:20, color:S.accent, fontSize:'0.65rem', fontWeight:700, textDecoration:'none' }}>📊</a>
+      {/* HEADER PRINCIPALE */}
+      <div style={{ padding:16, display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:`1px solid ${S.border}` }}>
+        <div>
+          <h1 style={{ margin:0, fontSize:'1.2rem', fontWeight:900, letterSpacing:'0.05em', color:'#fff' }}>⚡ {settings.targa} RECHARGE</h1>
+          <p style={{ margin:0, fontSize:'0.65rem', color:S.accent, fontWeight:700 }}>STATISTICHE E CONSUMI AUTO</p>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent }}>{kmMax?kmMax.toLocaleString('it'):'—'}</div>
-            <div style={{ fontSize:'0.62rem', color:S.text2, textTransform:'uppercase', letterSpacing:'0.06em' }}>km totali</div>
-          </div>
-          <div style={{ textAlign:'right' }}>
-            <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent }}>{costoTot?'€'+(costoTot||0).toFixed(2):'—'}</div>
-            <div style={{ fontSize:'0.62rem', color:S.text2, textTransform:'uppercase', letterSpacing:'0.06em' }}>costo tot.</div>
-          </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={() => setShowImport(true)} style={{ background:S.bg2, border:`1px solid ${S.border}`, borderRadius:10, color:S.text, padding:'6px 10px', fontSize:'0.8rem', cursor:'pointer' }}>📥 Import</button>
+          <button onClick={() => setShowExport(true)} style={{ background:S.bg2, border:`1px solid ${S.border}`, borderRadius:10, color:S.text, padding:'6px 10px', fontSize:'0.8rem', cursor:'pointer' }}>📤 Export</button>
         </div>
       </div>
 
-      <div style={{ padding:'16px 16px 120px' }}>
-        {view==='home'&&<>
-          {!ricariche.length?(
-            <div style={{ textAlign:'center', padding:'60px 20px', color:S.text2 }}>
-              <div style={{ fontSize:'4rem', marginBottom:16, opacity:0.4 }}>🔋</div>
-              <div style={{ fontSize:'1rem', marginBottom:24 }}>Nessuna ricarica.<br/>Premi + per aggiungere.</div>
-              <button onClick={()=>setShowImport(true)} style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'14px 28px', background:'rgba(0,229,255,0.1)', border:`1px solid rgba(0,229,255,0.3)`, borderRadius:40, color:S.accent, fontSize:'0.85rem', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}>
-                <span style={{ fontSize:'1.1rem' }}>📥</span> Importa dati
-              </button>
+      {/* CONTENUTO IN BASE ALLA NAVIGAZIONE */}
+      <div style={{ padding:16 }}>
+        {syncing && <div style={{ fontSize:'0.75rem', color:S.accent, background:'rgba(0,229,255,0.1)', padding:'6px 12px', borderRadius:8, marginBottom:12, textAlign:'center', fontWeight:600 }}>☁️ Sincronizzazione Cloud in corso...</div>}
+
+        {view === 'home' && (
+          <>
+            {/* PANORAMICA STATISTICHE */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+              <Card style={{ marginBottom:0 }}>
+                <CardTitle>Spesa Totale</CardTitle>
+                <div style={{ fontSize:'1.5rem', fontWeight:800, color:S.green, fontFamily:'monospace' }}>€ {costoTot.toFixed(2)}</div>
+              </Card>
+              <Card style={{ marginBottom:0 }}>
+                <CardTitle>Chilometraggio</CardTitle>
+                <div style={{ fontSize:'1.5rem', fontWeight:800, color:S.accent, fontFamily:'monospace' }}>{kmMax ? kmMax.toLocaleString() + ' km' : '—'}</div>
+              </Card>
             </div>
-          ):(() => {
-            const chiavi=Object.keys(perMese).sort();
-            return chiavi.slice().reverse().map((key,keyIdx)=>{
-              const [anno,mese]=key.split('-'), lista=perMese[key];
-              const totCosto=lista.reduce((s,r)=>s+r.costo,0), totKwh=lista.reduce((s,r)=>s+r.kwhEff,0);
-              let acc=0; const progMap={};
-              [...lista].reverse().forEach(r=>{acc+=r.costo;progMap[r.idx]=acc;});
-              const aperto=key in mesiAperti?mesiAperti[key]:keyIdx===0;
-              const toggleMese=()=>setMesiAperti(prev=>({...prev,[key]:!aperto}));
-              const listaCasa=lista.filter(r=>(r.luogo||'').toUpperCase()==='CASA');
-              const totCostoCasa=listaCasa.reduce((s,r)=>s+r.costo,0), totKwhCasa=listaCasa.reduce((s,r)=>s+r.kwhEff,0);
-              return (
-                <div key={key} style={{ marginBottom:10 }}>
-                  <div onClick={toggleMese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'linear-gradient(135deg,rgba(0,229,255,0.1),rgba(124,58,237,0.1))', border:`1px solid ${S.border}`, borderRadius:aperto?'14px 14px 0 0':14, cursor:'pointer', userSelect:'none' }}>
-                    <div style={{ display:'flex', alignItems:'center', flexShrink:0, width:140 }}>
-                      <div style={{ width:10, height:10, borderRadius:'50%', background:S.accent, flexShrink:0, marginRight:8 }}/>
-                      <div>
-                        <div style={{ fontWeight:900, fontSize:'1.2rem', textTransform:'uppercase', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.15 }}>{MESI_NOMI[parseInt(mese)-1]}</div>
-                        <div style={{ fontWeight:900, fontSize:'1.2rem', letterSpacing:'0.08em', color:'#ffffff', lineHeight:1.15 }}>{anno}</div>
+
+            {/* GRAFICI */}
+            {chartMensile.length > 0 && (
+              <Card>
+                <CardTitle>Spesa Mensile (€)</CardTitle>
+                <BarChart data={chartMensile} color={S.accent} />
+              </Card>
+            )}
+
+            {chartEff.length > 1 && (
+              <Card>
+                <CardTitle>Andamento Efficienza (kWh/100km)</CardTitle>
+                <LineChart data={chartEff} color={S.accent2} />
+              </Card>
+            )}
+
+            {/* STORICO MENSILE */}
+            <CardTitle style={{ marginTop:20, marginBottom:8 }}>Storico Sessioni</CardTitle>
+            {Object.keys(perMese).length === 0 ? (
+              <div style={{ textAlign:'center', color:S.text2, fontSize:'0.85rem', padding:'24px 0' }}>Nessuna ricarica registrata. Premi il tasto "+" in basso per iniziare.</div>
+            ) : (
+              Object.keys(perMese).sort((a,b)=>b.localeCompare(a)).map(meseKey => {
+                const [anno, meseNum] = meseKey.split('-');
+                const nomeMese = MESI_NOMI[parseInt(meseNum)-1] + ' ' + anno;
+                const aperto = !!mesiAperti[meseKey];
+                const sessioni = perMese[meseKey];
+                const spesaMese = sessioni.reduce((s,r)=>s+r.costo, 0);
+
+                return (
+                  <div key={meseKey} style={{ marginBottom:8, border:`1px solid ${S.border}`, borderRadius:12, overflow:'hidden', background:'rgba(255,255,255,0.01)' }}>
+                    <div onClick={() => toggleMese(meseKey)} style={{ padding:'12px 16px', background:S.bg2, display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }}>
+                      <div style={{ fontWeight:700, fontSize:'0.85rem', letterSpacing:'0.02em' }}>{nomeMese} ({sessioni.length})</div>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <span style={{ fontSize:'0.85rem', fontFamily:'monospace', color:S.green, fontWeight:700 }}>€ {spesaMese.toFixed(2)}</span>
+                        <span style={{ color:S.accent, fontSize:'0.7rem' }}>{aperto ? '▲' : '▼'}</span>
                       </div>
                     </div>
-                    <div style={{ display:'flex', alignItems:'center', flex:1, justifyContent:'center' }}>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>{lista.length} ric</div>
-                        <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>tot</div>
-                        <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>{listaCasa.length} ric</div>
-                        <div style={{ fontFamily:'monospace', fontSize:'0.83rem', color:S.text2, lineHeight:1.6 }}>casa</div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent, lineHeight:1.6 }}>€{(totCosto||0).toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:S.accent, lineHeight:1.6 }}>{(totKwh||0).toFixed(1)} kWh</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:'#34d399', lineHeight:1.6 }}>€{(totCostoCasa||0).toFixed(2)}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:'1rem', fontWeight:700, color:'#34d399', lineHeight:1.6 }}>{(totKwhCasa||0).toFixed(1)} kWh</div>
-                    </div>
-                  </div>
-                  {aperto&&(
-                    <div style={{ border:`1px solid ${S.border}`, borderTop:'none', borderRadius:'0 0 14px 14px', overflow:'hidden' }}>
-                      {lista.map(r=>{
-                        const d=new Date(r.data);
-                        const dataStr=String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-                        return (
-                          <div key={r.idx} style={{ padding:'14px 16px', background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', gap:8 }}>
-                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                              <div style={{ fontFamily:'monospace', fontSize:'0.85rem', color:S.text2, fontWeight:600 }}>{dataStr}{r.luogo?' · '+r.luogo:''}</div>
-                              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                                <div style={{ fontFamily:'monospace', fontSize:'0.8rem', color:S.text2 }}>{Math.round(r.pctPrima*(r.pctPrima<=1?100:1))}→{Math.round(r.pctDopo*(r.pctDopo<=1?100:1))}%</div>
-                                <button onClick={e=>{e.stopPropagation();apriModifica(r.idx);}} style={{ background:'none', border:'none', color:S.accent, cursor:'pointer', padding:'4px 6px', fontSize:'1rem' }}>✏️</button>
-                                <button onClick={e=>{e.stopPropagation();setConfirmIdx(r.idx);}} style={{ background:'none', border:'none', color:'#ef4444', cursor:'pointer', padding:'4px 8px', fontSize:'1.1rem', fontWeight:700 }}>✕</button>
+                    {aperto && (
+                      <div style={{ padding:8, display:'flex', flexDirection:'column', gap:6, background:'#0d1527' }}>
+                        {sessioni.map(r => (
+                          <div key={r.idx} style={{ padding:10, background:'rgba(255,255,255,0.03)', borderRadius:8, display:'flex', justifyContent:'space-between', alignItems:'center', borderLeft:`3px solid ${r.luogo==='CASA'?S.green:S.accent}` }}>
+                            <div>
+                              <div style={{ fontSize:'0.75rem', fontWeight:700, fontFamily:'monospace' }}>{r.data.split('-').reverse().join('/')} {r.luogo && `• ${r.luogo}`}</div>
+                              <div style={{ fontSize:'0.65rem', color:S.text2, marginTop:2 }}>
+                                {r.km ? `${r.km.toLocaleString()} km` : ''} {r.kmParziali ? `(+${r.kmParziali} km)` : ''} • {r.pctPrima}% → {r.pctDopo}%
+                              </div>
+                              <div style={{ fontSize:'0.65rem', color:S.text2 }}>
+                                {r.kwhEff.toFixed(1)} kWh eff. {r.kwh100 ? `• ${r.kwh100.toFixed(1)} kWh/100km` : ''}
                               </div>
                             </div>
-                            <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between' }}>
-                              <div style={{ fontSize:'1.3rem', fontWeight:700, fontFamily:'monospace', color:S.text }}>{(r.kwhEff||0).toFixed(2)} kWh</div>
-                              <div style={{ fontFamily:'monospace', fontSize:'0.9rem', color:'#f59e0b' }}>{r.kwh100?r.kwh100.toFixed(2)+' kWh/100km':'—'}</div>
-                            </div>
-                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                              <div style={{ fontSize:'0.8rem', color:S.text2, lineHeight:1.6 }}>
-                                {r.prezzoKwh?'€'+r.prezzoKwh+'/kWh':'—'}
-                                {r.kmParziali?'  ·  +'+r.kmParziali+' km':''}
-                                {r.km?'  ·  '+r.km.toLocaleString('it')+' km tot':''}
-                              </div>
-                              <div style={{ textAlign:'right' }}>
-                                <div style={{ fontFamily:'monospace', fontSize:'1.05rem', fontWeight:700, color:S.green }}>€{(r.costo||0).toFixed(2)}</div>
-                                <div style={{ fontFamily:'monospace', fontSize:'0.7rem', color:S.accent }}>↑€{(progMap[r.idx]||0).toFixed(2)}</div>
-                              </div>
+                            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                              <div style={{ textAlign:'right', fontFamily:'monospace', fontSize:'0.85rem', fontWeight:700, color:S.green }}>€ {r.costo.toFixed(2)}</div>
+                              <button onClick={() => apriModifica(r.idx)} style={{ background:'transparent', border:'none', color:S.accent, cursor:'pointer', fontSize:'0.9rem' }}>✏️</button>
+                              <button onClick={() => setConfirmIdx(r.idx)} style={{ background:'transparent', border:'none', color:'#ef4444', cursor:'pointer', fontSize:'0.9rem' }}>🗑</button>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            });
-          })()}
-        </>}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
 
-        {view==='add'&&<FormRicarica settings={settings} ricariche={ricariche} editIdx={editIdx} onSave={salvaRicarica} onCancel={editIdx!==null?annullaModifica:null} showToast={showToast}/>}
+        {view === 'add' && (
+          <FormRicarica
+            settings={settings}
+            ricariche={ricariche}
+            editIdx={editIdx}
+            onSave={salvaRicarica}
+            onCancel={annullaModifica}
+            showToast={showToast}
+          />
+        )}
 
-        {view==='charts'&&<>
-          <Card><CardTitle>Costo mensile (€)</CardTitle><BarChart data={chartMensile} color={S.accent}/></Card>
-          <Card><CardTitle>kWh / 100km per ricarica</CardTitle><LineChart data={chartEff} color={S.accent2}/></Card>
-          <Card><CardTitle>Prezzo €/kWh nel tempo</CardTitle><LineChart data={chartPrezzo} color="#f59e0b"/></Card>
-        </>}
-
-        {view==='export'&&<>
+        {view === 'settings' && (
           <Card>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              <button onClick={()=>setShowImport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(0,229,255,0.1)', border:`1px solid rgba(0,229,255,0.3)`, borderRadius:14, color:S.accent, fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}><span style={{ fontSize:'1.6rem' }}>📥</span> Importa</button>
-              <button onClick={()=>setShowExport(true)} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(124,58,237,0.1)', border:'1px solid rgba(124,58,237,0.35)', borderRadius:14, color:'#a78bfa', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer' }}><span style={{ fontSize:'1.6rem' }}>📤</span> Esporta</button>
-              <button onClick={sincronizzaDaSheet} disabled={syncing} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(16,185,129,0.1)', border:'1px solid rgba(16,185,129,0.35)', borderRadius:14, color:'#10b981', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer', opacity:syncing?0.6:1 }}><span style={{ fontSize:'1.6rem' }}>☁️</span> {syncing?'...':'Da Sheet'}</button>
-              <button onClick={sincronizzaVersoSheet} disabled={syncing} style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'18px 0', background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.35)', borderRadius:14, color:'#f59e0b', fontSize:'0.85rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.06em', cursor:'pointer', opacity:syncing?0.6:1 }}><span style={{ fontSize:'1.6rem' }}>📡</span> {syncing?'...':'A Sheet'}</button>
-            </div>
-          </Card>
-          <Card>
-            <CardTitle>Riepilogo</CardTitle>
-            {Object.entries((() => {
-              const pm={};
-              ricariche.forEach(r=>{const d=new Date(r.data);const k=MESI_NOMI[d.getMonth()]+' '+d.getFullYear();if(!pm[k])pm[k]={costo:0,kwh:0,count:0};pm[k].costo+=r.costo;pm[k].kwh+=r.kwhEff;pm[k].count++;});
-              return pm;
-            })()).map(([mese,v])=>(
-              <div key={mese} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
-                <div><div style={{ fontSize:'0.85rem' }}>{mese}</div><div style={{ fontSize:'0.65rem', color:S.text2 }}>{v.count} ricariche · {(v.kwh||0).toFixed(1)} kWh</div></div>
-                <div style={{ fontFamily:'monospace', color:S.green }}>€{(v.costo||0).toFixed(2)}</div>
+            <CardTitle>Impostazioni Applicazione</CardTitle>
+            <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Targa / Nome Veicolo</label>
+                <input type="text" value={settings.targa} onChange={e=>setSettings({...settings, targa:e.target.value.toUpperCase()})} style={inputSt}/>
               </div>
-            ))}
-            {!ricariche.length&&<div style={{ textAlign:'center', padding:20, color:S.text2, fontSize:'0.85rem' }}>Nessun dato</div>}
-          </Card>
-        </>}
-
-        {view==='settings'&&<>
-          <Card>
-            <CardTitle>Impostazioni</CardTitle>
-            {[{label:'Capacità batteria (kWh)',sub:'kWh totali della batteria',key:'batteria',type:'number',step:1},{label:'Prezzo default €/kWh',key:'prezzo',type:'number',step:0.001},{label:'Targa / Nome veicolo',key:'targa',type:'text'}].map(f=>(
-              <div key={f.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 0', borderBottom:`1px solid rgba(255,255,255,0.05)` }}>
-                <div><div style={{ fontSize:'0.85rem' }}>{f.label}</div>{f.sub&&<div style={{ fontSize:'0.65rem', color:S.text2 }}>{f.sub}</div>}</div>
-                <input type={f.type} step={f.step} value={settings[f.key]} onChange={e=>setSettings({...settings,[f.key]:f.type==='number'?parseFloat(e.target.value)||0:e.target.value})} style={{...inputSt,width:100,textAlign:'right'}}/>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Capacità Batteria (kWh)</label>
+                <input type="number" value={settings.batteria} onChange={e=>setSettings({...settings, batteria:parseFloat(e.target.value)||0})} style={inputSt}/>
               </div>
-            ))}
-          </Card>
-          <Card>
-            <CardTitle>Preset % batteria</CardTitle>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-              {[{label:'% Prima — op.1',key:'p1a'},{label:'% Prima — op.2',key:'p1b'},{label:'% Dopo — op.1',key:'p2a'},{label:'% Dopo — op.2',key:'p2b'}].map(f=>(
-                <div key={f.key}>
-                  <div style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase', marginBottom:6 }}>{f.label}</div>
-                  <input type="number" value={settings[f.key]} onChange={e=>setSettings({...settings,[f.key]:parseFloat(e.target.value)||0})} style={{...inputSt,textAlign:'right'}}/>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Prezzo Predefinito (€/kWh)</label>
+                <input type="number" step="0.01" value={settings.prezzo} onChange={e=>setSettings({...settings, prezzo:parseFloat(e.target.value)||0})} style={inputSt}/>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Rapido % Prima A</label>
+                  <input type="number" value={settings.p1a} onChange={e=>setSettings({...settings, p1a:parseInt(e.target.value)||0})} style={inputSt}/>
                 </div>
-              ))}
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Rapido % Prima B</label>
+                  <input type="number" value={settings.p1b} onChange={e=>setSettings({...settings, p1b:parseInt(e.target.value)||0})} style={inputSt}/>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Rapido % Dopo A</label>
+                  <input type="number" value={settings.p2a} onChange={e=>setSettings({...settings, p2a:parseInt(e.target.value)||0})} style={inputSt}/>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  <label style={{ fontSize:'0.65rem', color:S.text2, textTransform:'uppercase' }}>Rapido % Dopo B</label>
+                  <input type="number" value={settings.p2b} onChange={e=>setSettings({...settings, p2b:parseInt(e.target.value)||0})} style={inputSt}/>
+                </div>
+              </div>
+              
+              <div style={{ borderTop:`1px solid ${S.border}`, marginTop:12, paddingTop:16, display:'flex', flexDirection:'column', gap:8 }}>
+                <button onClick={sincronizzaVersoSheet} style={{ width:'100%', padding:12, background:'rgba(16,185,129,0.15)', border:'1px solid #10b981', borderRadius:10, color:S.green, cursor:'pointer', fontSize:'0.8rem', fontWeight:700 }}>☁️ Forza Caricamento su Google Sheets</button>
+                <button onClick={sincronizzaDaSheet} style={{ width:'100%', padding:12, background:'rgba(0,229,255,0.1)', border:`1px solid ${S.accent}`, borderRadius:10, color:S.accent, cursor:'pointer', fontSize:'0.8rem', fontWeight:700 }}>☁️ Forza Importazione da Google Sheets</button>
+                <button onClick={() => setConfirmIdx('all')} style={{ width:'100%', padding:12, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.4)', borderRadius:10, color:'#ef4444', cursor:'pointer', fontSize:'0.8rem', fontWeight:700, marginTop:12 }}>🗑 Cancella tutti i dati locali</button>
+              </div>
             </div>
           </Card>
-          <Card style={{ borderColor:'rgba(239,68,68,0.3)' }}>
-            <CardTitle style={{ color:'#ef4444' }}>⚠️ Zona pericolosa</CardTitle>
-            <button onClick={()=>setConfirmIdx('all')} style={{ width:'100%', padding:12, background:'transparent', border:'1px solid rgba(239,68,68,0.4)', borderRadius:10, color:'#ef4444', fontSize:'0.85rem', cursor:'pointer' }}>🗑 Cancella tutti i dati</button>
-          </Card>
-          <Card>
-            <CardTitle>☁️ Google Sheets</CardTitle>
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={{ fontSize:'0.62rem', textTransform:'uppercase', color:S.text2 }}>URL Script</label>
-              <input type="text" defaultValue={getSheetsUrl()} onChange={e=>storage.set('mgs5_sheetsUrl', e.target.value.trim())} placeholder="https://script.google.com/..." style={{...inputSt, fontSize:'0.7rem'}}/>
-              <div style={{ fontSize:'0.6rem', color:S.text2, marginTop:2 }}>Modifica solo se hai un nuovo script Apps Script</div>
-            </div>
-          </Card>
-        </>}
+        )}
       </div>
 
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, background:'rgba(10,15,30,0.95)', backdropFilter:'blur(20px)', borderTop:`1px solid ${S.border}`, display:'flex', zIndex:100, paddingBottom:'env(safe-area-inset-bottom)' }}>
-        {[{id:'home',icon:'⚡',label:'Home'},{id:'add',icon:'＋',label:'Aggiungi'},{id:'charts',icon:'📈',label:'Grafici'},{id:'export',icon:'📤',label:'Esporta'},{id:'settings',icon:'⚙️',label:'Config'}].map(btn=>(
-          <button key={btn.id} onClick={()=>{if(btn.id==='add')setEditIdx(null);setView(btn.id);}} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, padding:'8px 4px', background:'none', border:'none', color:view===btn.id?S.accent:S.text2, fontFamily:'system-ui', fontSize:'0.6rem', textTransform:'uppercase', letterSpacing:'0.08em', cursor:'pointer' }}>
-            <span style={{ fontSize:'1.3rem', lineHeight:1 }}>{btn.icon}</span>
-            {btn.label}
-          </button>
-        ))}
+      {/* BARRA DI NAVIGAZIONE IN BASSO */}
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:480, height:64, background:'#070a14', borderTop:`1px solid ${S.border}`, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', alignItems:'center', zIndex:200 }}>
+        <button onClick={()=>{setEditIdx(null);setView('home');}} style={{ background:'transparent', border:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, color:view==='home'?S.accent:S.text2, cursor:'pointer' }}>
+          <span style={{ fontSize:'1.2rem' }}>📊</span><span style={{ fontSize:'0.6rem', textTransform:'uppercase' }}>Dati</span>
+        </button>
+        <button onClick={()=>{setEditIdx(null);setView('add');}} style={{ background:'transparent', border:'none', display:'flex', justifyContent:'center', cursor:'pointer' }}>
+          <div style={{ width:48, height:48, borderRadius:24, background:`linear-gradient(135deg,${S.accent},${S.accent2})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.5rem', color:'#fff', boxShadow:'0 4px 12px rgba(0,229,255,0.3)', marginTop:-20 }}>+</div>
+        </button>
+        <button onClick={()=>{setEditIdx(null);setView('settings');}} style={{ background:'transparent', border:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, color:view==='settings'?S.accent:S.text2, cursor:'pointer' }}>
+          <span style={{ fontSize:'1.2rem' }}>⚙️</span><span style={{ fontSize:'0.6rem', textTransform:'uppercase' }}>Config</span>
+        </button>
       </div>
-
-      {toast&&(
-        <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:toast.color, color:'#fff', padding:'10px 20px', borderRadius:20, fontSize:'0.8rem', fontWeight:600, zIndex:200, whiteSpace:'nowrap', boxShadow:'0 4px 20px rgba(0,0,0,0.4)' }}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   );
 }
