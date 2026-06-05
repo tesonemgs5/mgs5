@@ -1,49 +1,30 @@
-// ============================================
-// GOOGLE APPS SCRIPT — MGS5 Tracker Sync
-// Incolla questo codice in:
-// Google Sheet → Estensioni → Apps Script
-// ============================================
-
-
-
-function doPost(e) { return doGet(e); }
-
-function doGet(e) {
+function doPost(e) {
   try {
-    const action = e.parameter.action || 'read';
+    const body = JSON.parse(e.postData.contents);
+    const ricariche = body.ricariche || [];
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheets()[0];
 
-    if (action === 'write') {
-      const ricariche = JSON.parse(decodeURIComponent(e.parameter.data || '[]'));
-      const lastRow = sheet.getLastRow();
-      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, 10).clearContent();
-      ricariche.forEach((r, i) => {
-        sheet.getRange(i + 2, 1, 1, 10).setValues([[
-          r.data, r.km || '', r.kmParziali || '',
-          r.pctPrima, r.pctDopo, r.kwhEff,
-          r.prezzoKwh, r.costo, r.kwh100 || '', r.luogo || ''
-        ]]);
-      });
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: true }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
+    // Intestazioni
+    sheet.getRange(1, 1, 1, 10).setValues([[
+      'Data','KM','KM Parziali','% Prima','% Dopo','kWh Eff','€/kWh','Costo €','kWh/100km','Luogo'
+    ]]);
 
-    const rows = sheet.getDataRange().getValues();
-    const data = [];
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
-      if (!r[0]) continue;
-      data.push({
-        data: r[0], km: r[1]||null, kmParziali: r[2]||null,
-        pctPrima: r[3], pctDopo: r[4], kwhEff: r[5],
-        prezzoKwh: r[6], costo: r[7], kwh100: r[8]||null, luogo: r[9]||null,
-        kwhTeor: 0
-      });
-    }
+    // Cancella righe precedenti
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, 10).clearContent();
+
+    // Scrivi dati
+    ricariche.forEach((r, i) => {
+      sheet.getRange(i + 2, 1, 1, 10).setValues([[
+        r.data, r.km || '', r.kmParziali || '',
+        r.pctPrima, r.pctDopo, r.kwhEff,
+        r.prezzoKwh, r.costo, r.kwh100 || '', r.luogo || ''
+      ]]);
+    });
+
     return ContentService
-      .createTextOutput(JSON.stringify({ data }))
+      .createTextOutput(JSON.stringify({ success: true }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch(err) {
@@ -51,4 +32,10 @@ function doGet(e) {
       .createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ success: false, error: 'Usa POST' }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
